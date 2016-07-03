@@ -1,0 +1,6 @@
+{
+  "name": "Rightpack",
+  "tagline": "PHP's pack and unpack, done the right way.",
+  "body": "# rightpack class\r\n\r\nLicensed under MIT.\r\n\r\nPHP's pack() and unpack(), done the right way.\r\n\r\nThis library was created to help me develop a [client for the mtproto protocol](https://github.com/danog/MadelineProto).  \r\n\r\nThe format syntax is exactly the one used in python's struct (https://docs.python.org/2/library/struct.html)\r\n\r\nFor now custom byte size is not fully supported, as well as p and P formats.\r\n\r\n## Installation\r\n\r\nInstall using composer:\r\n```\r\ncomposer require danog/rightpack\r\n```\r\n\r\n# Usage\r\n\r\n```\r\nrequire('vendor/autoload.php');\r\n$rightpack = new \\danog\\rightpack();\r\n```\r\n\r\n[Daniil Gentili](http://daniil.it)\r\n",
+  "note": "Don't delete this file! It's used internally to help with page regeneration."
+}
