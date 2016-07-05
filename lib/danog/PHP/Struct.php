@@ -102,6 +102,7 @@ class Struct {
 	 * @return 	Encoded data 
 	 */
 	public function pack($format, ...$data) {
+		//var_dump("Pack called with ", $format, $data);
 		$result = null; // Data to return
 		$packcommand = $this->parseformat($format, $this->array_total_strlen($data), $this->array_each_strlen($data)); // Get pack parameters
 

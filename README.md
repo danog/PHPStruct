@@ -1,5 +1,7 @@
 # PHPStruct class
 
+[![Build Status](https://travis-ci.org/danog/PHPStruct.svg?branch=master)](https://travis-ci.org/danog/PHPStruct)
+
 Licensed under MIT.
 
 PHP implementation of Python's struct module.
