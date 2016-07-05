@@ -1,19 +1,20 @@
 <?php
 
-namespace danog\RightPack;
+namespace danog\PHP;
 
 /**
- * RightPack
+ * PHPStruct
+ * PHP implementation of Python's struct module.
+ * This library was created to help me develop a [client for the mtproto protocol](https://github.com/danog/MadelineProto).  
+ * The functions and the formats are exactly the ones used in python's struct (https://docs.python.org/2/library/struct.html)
+ * For now custom byte size is not fully supported, as well as p and P formats.
  *
- * PHP's pack() and unpack(), done the right way.
- * The format syntax is exactly the one used in python's struct (https://docs.python.org/2/library/struct.html)
- * For now custom byte size is not fully supported.
- *
- * @package		rightpack
+ * @package		phpstruct
  * @author		Daniil Gentili <daniil@daniil.it>
  * @license		MIT license
 */
-class RightPacker {
+// Main class
+class Struct {
 	/**
 	 * Constructor
 	 *
@@ -54,11 +55,45 @@ class RightPacker {
 			"Q" => "Q",
 			"s" => "a",
 		];
-
+		$this->LENGTH = [
+			"p" => 1, 
+			"P" => 8, 
+			"i" => 4, 
+			"I" => 4, 
+			"f" => 4, 
+			"d" => 8, 
+			// These formats should work exactly as in python's struct (same byte size, etc).
+			"c" => 1,
+			"?" => 1,
+			"x" => 1,
+			"b" => 1,
+			"B" => 1,
+			"h" => 2,
+			"H" => 2,
+			"l" => 8,
+			"L" => 8,
+			"q" => 8,
+			"Q" => 8,
+			"s" => 1,
+		];
 	} 
 
 	/**
-	 * Pack
+	 * ExceptionErrorHandler
+	 *
+	 * Error handler for pack and unpack
+	 *
+	 */
+	public function ExceptionErrorHandler($errno = 0, $errstr = null, $errfile = null, $errline = null) {
+		// If error is suppressed with @, don't throw an exception
+		if (error_reporting() === 0) {
+			return true; // return true to continue through the others error handlers
+		}
+		throw new StructException($errstr, $errno);
+	}
+
+	/**
+	 * pack
 	 *
 	 * Packs data into bytes
 	 *
@@ -70,28 +105,47 @@ class RightPacker {
 		$result = null; // Data to return
 		$packcommand = $this->parseformat($format, $this->array_total_strlen($data), $this->array_each_strlen($data)); // Get pack parameters
 
+		set_error_handler([$this, 'ExceptionErrorHandler']);
 		foreach ($packcommand as $key => $command) {
-			$curresult = pack($this->FORMATS[$command["format"]].$command["count"], $data[$key]); // Pack current char
+			try {
+				$curresult = pack($this->FORMATS[$command["format"]].$command["count"], $data[$key]); // Pack current char
+			} catch(StructException $e) {
+				throw new StructException("An error occurred while packing (" . $e->getMessage() . " on offset " . $key . ").");
+			}
+			
 			if(isset($command["modifiers"]["BIG_ENDIAN"]) && ((!$this->BIG_ENDIAN && $command["modifiers"]["BIG_ENDIAN"]) || ($this->BIG_ENDIAN && !$command["modifiers"]["BIG_ENDIAN"]))) $curresult = strrev($curresult); // Reverse if wrong endianness
 			$result .= $curresult;
+		}
+		restore_error_handler();
+		if(strlen($result) != $this->calcsize($format)) {
+			throw new StructException("Length of generated data is different from length calculated using format string.");
 		}
 		return $result;
 	}
 	/**
-	 * Unpack
+	 * unpack
 	 *
-	 * Unpacks data into bytes
+	 * Unpacks data into an array
 	 *
 	 * @param	$format	Format string
 	 * @param	$data	Data to decode
 	 * @return 	Decoded data 
 	 */
 	public function unpack($format, $data) {
+		if(strlen($data) != $this->calcsize($format)) {
+			throw new StructException("Length of given data is different from length calculated using format string.");
+		}
 		$result = []; // Data to return
 		$packcommand = $this->parseformat($format, strlen($data)); // Get unpack parameters
+		set_error_handler([$this, 'ExceptionErrorHandler']);
 		foreach ($packcommand as $key => $command) {
 			if(isset($command["modifiers"]["BIG_ENDIAN"]) && ((!$this->BIG_ENDIAN && $command["modifiers"]["BIG_ENDIAN"]) || ($this->BIG_ENDIAN && !$command["modifiers"]["BIG_ENDIAN"]))) $data[$key] = strrev($data[$key]); // Reverse if wrong endianness
-			$result[$key] = unpack($this->FORMATS[$command["format"]].$command["count"], $data[$key])[1]; // Pack current char
+			try {
+				$result[$key] = join('', unpack($this->FORMATS[$command["format"]].$command["count"], $data[$key])); // Unpack current char
+			} catch(StructException $e) {
+				throw new StructException("An error occurred while unpacking data (" . $e->getMessage() . " on offset " . $key . ").");
+			}
+
 			switch ($command["format"]) {
 				case '?':
 					if ($result[$key] == 0) $result[$key] = false; else $result[$key] = true;
@@ -100,22 +154,24 @@ class RightPacker {
 					break;
 			}
 		}
+		restore_error_handler();
 		return $result;
 	}
 	
+
 	/**
-	 * Parse format
+	 * parseformat
 	 *
 	 * Parses format string.
 	 *
-	 * @throws	ParserException if format string is too long or there aren't enough parameters or if an unkown format or modifier is supplied.
+	 * @throws	StructException if format string is too long or there aren't enough parameters or if an unkown format or modifier is supplied.
 	 * @param	$format		Format string to parse
 	 * @param	$count		Number of chars in all objects to encode/decode
 	 * @param	$arraycount	(Optional) Array containing the number of chars contained in each element of the array to pack
 	 * @return 	Array with format and modifiers for each object to encode/decode
 	 */
 	public function parseformat($format, $count, $arraycount = null) {
-		$formatcharcount = 0; // Current element to decode/encodeù
+		$formatcharcount = 0; // Current element to decode/encode
 		$charcount = 0; // Current char
 
 		$result = []; // Array with the results
@@ -130,8 +186,6 @@ class RightPacker {
 				$result[$formatcharcount]["modifiers"] = $this->MODIFIERS[$currentformatchar]; // Set the modifiers for the current format char
 			} else if(is_int($currentformatchar) && ($currentformatchar > 0 || $currentformatchar <= 9)) {
 				$result[$formatcharcount]["count"] .= $currentformatchar; // Set the count for the current format char
-			} else if($currentformatchar == "*") {
-				$result[$formatcharcount]["count"] = $count - $formatcharcount; // Set the count for the current format char
 			} else if(isset($this->FORMATS[$currentformatchar])) {
 				if(!isset($result[$formatcharcount]["count"]) || $result[$formatcharcount]["count"] == 0 || $result[$formatcharcount]["count"] == null) {
 					$result[$formatcharcount]["count"] = 1; // Set count to 1 if something's wrong.
@@ -141,27 +195,27 @@ class RightPacker {
 
 				if($arraycount !== null) {
 					if($formatcharcount + 1 > count($arraycount)) {
-						throw new ParserException("Format string too long or not enough parameters at offset ".$offset.".");
+						throw new StructException("Format string too long or not enough parameters at offset ".$offset.".");
 					}
 					if($result[$formatcharcount]["count"] > $arraycount[$formatcharcount]) {
-						throw new ParserException("Format string too long for offset ".$offset.".");
+						throw new StructException("Format string too long for offset ".$offset.".");
 					}
 				}
 				if($charcount > $count) {
-					throw new ParserException("Format string too long or not enough chars (total char count is bigger than provided char count).");
+					throw new StructException("Format string too long or not enough chars (total char count is bigger than provided char count).");
 				}
 				$formatcharcount++; // Increase element count
 
 				
-			} else throw new ParserException("Unkown format or modifier supplied (".$currentformatchar." at offset ".$offset.").");
+			} else throw new StructException("Unkown format or modifier supplied (".$currentformatchar." at offset ".$offset.").");
 		}
 		if($charcount != $count) {
-			throw new ParserException("Too many parameters or not enough format chars were specified.");
+			throw new StructException("Too many parameters or not enough format chars were specified.");
 		}
 		return $result;	
 	}
 	/**
-	 * Array each strlen
+	 * array_each_strlen
 	 *
 	 * Get length of each array element.
 	 *
@@ -175,7 +229,7 @@ class RightPacker {
 		return $array;
 	}
 	/**
-	 * Array total strlen
+	 * array_total_strlen
 	 *
 	 * Get total length of every array element.
 	 *
@@ -189,4 +243,36 @@ class RightPacker {
 		}
 		return $count;
 	}
+	/**
+	 * calcsize
+	 *
+	 * Return the size of the struct (and hence of the string) corresponding to the given format.
+
+	 *
+	 * @param	$format	Format string
+	 * @return 	Int with size of the struct.
+	 */
+	public function calcsize($format) {
+		$size = 0;
+		foreach (str_split($format) as $offset => $currentformatchar) {
+			if(isset($this->MODIFIERS[$currentformatchar])) {
+				// Nuffink for now
+			} else if(is_int($currentformatchar) && ($currentformatchar > 0 || $currentformatchar <= 9)) {
+				$multiply .= $currentformatchar; // Set the count for the current format char
+			} else if(isset($this->LENGTH[$currentformatchar])) {
+				if(!isset($multiply) || $multiply == null) {
+					$multiply = 1; // Set count to 1 if something's wrong.
+				}
+				$size += $multiply * $this->LENGTH[$currentformatchar];
+
+				$multiply = null;
+			} else throw new StructException("Unkown format or modifier supplied (".$currentformatchar." at offset ".$offset.").");
+		}
+		return $size;
+	}
+}
+
+/* Just an exception class */
+class StructException extends \Exception
+{
 }

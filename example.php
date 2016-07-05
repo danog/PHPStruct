@@ -1,6 +1,6 @@
 <?php
 
 require('vendor/autoload.php');
-$rightpack = new danog\RightPack\RightPacker();
+$struct = new danog\PHP\Struct();
 
-echo bin2hex($rightpack->pack("cc", "a", "s"));
+echo bin2hex($struct->pack("cc", "a", "s"));

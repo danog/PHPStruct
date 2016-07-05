@@ -1,9 +1,9 @@
 {
-    "name": "danog/rightpack",
+    "name": "danog/phpstruct",
     "type": "library",
-    "description": "PHP's pack() and unpack(), done the right way.",
+    "description": "PHP implementation of python's struct module.",
     "license": "MIT",
-    "homepage": "https://daniil.it/rightpack",
+    "homepage": "https://daniil.it/phpstruct",
     "keywords": ["pack", "unpack", "byte", "bytes", "python", "struct"],
     "authors": [
         {
@@ -16,7 +16,7 @@
     },
     "autoload": {
         "psr-0": {
-            "danog\\RightPack\\": "lib/"
+            "danog\\PHP\\": "lib/"
         }
     }
 }
