@@ -102,7 +102,6 @@ class Struct {
 	 * @return 	Encoded data 
 	 */
 	public function pack($format, ...$data) {
-		//var_dump("Pack called with ", $format, $data);
 		$result = null; // Data to return
 		$packcommand = $this->parseformat($format, $this->array_total_strlen($data), $this->array_each_strlen($data)); // Get pack parameters
 
@@ -117,6 +116,7 @@ class Struct {
 			if(isset($command["modifiers"]["BIG_ENDIAN"]) && ((!$this->BIG_ENDIAN && $command["modifiers"]["BIG_ENDIAN"]) || ($this->BIG_ENDIAN && !$command["modifiers"]["BIG_ENDIAN"]))) $curresult = strrev($curresult); // Reverse if wrong endianness
 			$result .= $curresult;
 		}
+
 		restore_error_handler();
 		if(strlen($result) != $this->calcsize($format)) {
 			throw new StructException("Length of generated data is different from length calculated using format string.");
@@ -173,27 +173,26 @@ class Struct {
 	 */
 	public function parseformat($format, $count, $arraycount = null) {
 		$formatcharcount = 0; // Current element to decode/encode
+		$realformatcharcount = 0; // Current element to decode/encode (for real)
 		$charcount = 0; // Current char
 
 		$result = []; // Array with the results
 		foreach (str_split($format) as $offset => $currentformatchar) { // Current format char
-			if(!isset($result[$formatcharcount]) || !is_array($result[$formatcharcount]))	{
-				$result[$formatcharcount] = []; // Create array for current element
+			if(!isset($result[$realformatcharcount]) || !is_array($result[$realformatcharcount]))	{
+				$result[$realformatcharcount] = []; // Create array for current element
 			}
 
-			$result[$formatcharcount]["count"] = 0; // Set the count of the objects to decode for the current format char to 0
+			$result[$realformatcharcount]["count"] = 0; // Set the count of the objects to decode for the current format char to 0
 
-			if(isset($this->MODIFIERS[$currentformatchar])) { // If current format char is a modifier
-				$result[$formatcharcount]["modifiers"] = $this->MODIFIERS[$currentformatchar]; // Set the modifiers for the current format char
-			} else if(is_int($currentformatchar) && ($currentformatchar > 0 || $currentformatchar <= 9)) {
-				$result[$formatcharcount]["count"] .= $currentformatchar; // Set the count for the current format char
-			} else if(isset($this->FORMATS[$currentformatchar])) {
-				if(!isset($result[$formatcharcount]["count"]) || $result[$formatcharcount]["count"] == 0 || $result[$formatcharcount]["count"] == null) {
-					$result[$formatcharcount]["count"] = 1; // Set count to 1 if something's wrong.
+			if(isset($this->MODIFIERS[$realformatcharcount])) { // If current format char is a modifier
+				$result[$realformatcharcount]["modifiers"] = $this->MODIFIERS[$realformatcharcount]; // Set the modifiers for the current format char
+			} else if(is_int($realformatcharcount) && ($realformatcharcount > 0 || $realformatcharcount <= 9)) {
+				$result[$realformatcharcount]["count"] .= $realformatcharcount; // Set the count for the current format char
+			} else if(isset($this->FORMATS[$realformatcharcount])) {
+				if(!isset($result[$realformatcharcount]["count"]) || $result[$realformatcharcount]["count"] == 0 || $result[$realformatcharcount]["count"] == null) {
+					$result[$realformatcharcount]["count"] = 1; // Set count to 1 if something's wrong.
 				}
-				$result[$formatcharcount]["format"] = $currentformatchar; // Set format
-				$charcount += $result[$formatcharcount]["count"];
-
+				$result[$realformatcharcount]["format"] = $realformatcharcount; // Set format
 				if($arraycount !== null) {
 					if($formatcharcount + 1 > count($arraycount)) {
 						throw new StructException("Format string too long or not enough parameters at offset ".$offset.".");
@@ -202,10 +201,14 @@ class Struct {
 						throw new StructException("Format string too long for offset ".$offset.".");
 					}
 				}
+				if($currentformatchar != "x") {
+					$formatcharcount++;
+					$charcount += $result[$realformatcharcount]["count"];
+				}
 				if($charcount > $count) {
 					throw new StructException("Format string too long or not enough chars (total char count is bigger than provided char count).");
 				}
-				$formatcharcount++; // Increase element count
+				$realformatcharcount++; // Increase element count
 
 				
 			} else throw new StructException("Unkown format or modifier supplied (".$currentformatchar." at offset ".$offset.").");
