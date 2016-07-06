@@ -1,0 +1,9 @@
+pack("foxrmat", "f", "o", "r", "m", "a", "t")
+check if the number of format chars matches the number of the parameters (ignore x), 
+check if each format char (except x) has its own param with the correct length
+done in parse: check unknown formats
+done in func: check if length generated from calcsize is the length of generated data
+
+unpack("foxrmat", $unpack)
+done in parse: check unknown formats
+done in func: check if length generated from calcsize is the length of given data
