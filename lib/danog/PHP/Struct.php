@@ -23,13 +23,6 @@ class Struct {
 	 */
 	public function __construct(){
 		$this->BIG_ENDIAN = (pack('L', 1) === pack('N', 1));
-		$this->MODIFIERS = [
-			"<" => ["BIG_ENDIAN" => false],
-			">" => ["BIG_ENDIAN" => true],
-			"!" => ["BIG_ENDIAN" => true],
-			"@" => ["BIG_ENDIAN" => $this->BIG_ENDIAN],
-			"=" => ["BIG_ENDIAN" => $this->BIG_ENDIAN]
-		];
 		$this->FORMATS = [
 			// These formats need to be modified after/before encoding/decoding.
 			"p" => "p", // “Pascal string”, meaning a short variable-length string stored in a fixed number of bytes, given by the count. The first byte stored is the length of the string, or 255, whichever is smaller. The bytes of the string follow. If the string passed in to pack() is too long (longer than the count minus 1), only the leading count-1 bytes of the string are stored. If the string is shorter than count-1, it is padded with null bytes so that exactly count bytes in all are used. Note that for unpack(), the 'p' format character consumes count bytes, but that the string returned can never contain more than 255 characters.
@@ -75,6 +68,33 @@ class Struct {
 			"Q" => 8,
 			"s" => 1,
 		];
+		$this->NATIVE_LENGTH = [
+			"p" => 1, 
+			"P" => 8, 
+			"i" => strlen(pack($this->FORMATS["i"], 1)), 
+			"I" => strlen(pack($this->FORMATS["I"], 1)), 
+			"f" => strlen(pack($this->FORMATS["f"], 2.0)), 
+			"d" => strlen(pack($this->FORMATS["d"], 2.0)), 
+			"c" => strlen(pack($this->FORMATS["c"], "a")),
+			"?" => strlen(pack($this->FORMATS["?"], false)),
+			"x" => strlen(pack($this->FORMATS["x"])),
+			"b" => strlen(pack($this->FORMATS["b"], "c")),
+			"B" => strlen(pack($this->FORMATS["B"], "c")),
+			"h" => strlen(pack($this->FORMATS["h"], -700)),
+			"H" => strlen(pack($this->FORMATS["H"], 700)),
+			"l" => strlen(pack($this->FORMATS["l"], -70000000)),
+			"L" => strlen(pack($this->FORMATS["l"], 70000000)),
+			"q" => strlen(pack($this->FORMATS["l"], -70000000)),
+			"Q" => strlen(pack($this->FORMATS["l"], 70000000)),
+			"s" => strlen(pack($this->FORMATS["l"], "c")),
+		];
+		$this->MODIFIERS = [
+			"<" => ["BIG_ENDIAN" => false, "LENGTH" => $this->LENGTH],
+			">" => ["BIG_ENDIAN" => true, "LENGTH" => $this->LENGTH],
+			"!" => ["BIG_ENDIAN" => true, "LENGTH" => $this->LENGTH],
+			"=" => ["BIG_ENDIAN" => $this->BIG_ENDIAN, "LENGTH" => $this->LENGTH],
+			"@" => ["BIG_ENDIAN" => $this->BIG_ENDIAN, "LENGTH" => $this->NATIVE_LENGTH]
+		];
 	} 
 
 	/**
@@ -102,9 +122,6 @@ class Struct {
 	 */
 	public function pack($format, ...$data) {
 		$result = null; // Data to return
-		if(!$this->checkvalues($format, ...$data)) {
-			throw new StructException("An error occurred while parsing parameters.");
-		}
 		$packcommand = $this->parseformat($format, $this->array_each_strlen($data)); // Get pack parameters
 		set_error_handler([$this, 'ExceptionErrorHandler']);
 		foreach ($packcommand as $key => $command) {
@@ -140,30 +157,8 @@ class Struct {
 		if(strlen($data) != $this->calcsize($format)) {
 			throw new StructException("Length of given data is different from length calculated using format string.");
 		}
-		$dataarray = [];
-		$dataarraykey = 0;
-		$datakey = 0;
-		$multiply = null;
-		foreach (str_split($format) as $offset => $currentformatchar) {
-			if(isset($this->MODIFIERS[$currentformatchar])) {
-				// Nuffink for now
-			} else if(is_numeric($currentformatchar) && ((int)$currentformatchar > 0 || (int)$currentformatchar <= 9)) {
-				$multiply .= $currentformatchar; // Set the count for the current format char
-			} else if(isset($this->LENGTH[$currentformatchar])) {
-				if(!isset($multiply) || $multiply == null) {
-					$multiply = 1; // Set count to 1 if something's wrong.
-				}
-				for ($x = 0;$x < $multiply;$x++){
-					$dataarray[$dataarraykey] = $data[$datakey];
-					$datakey++;
-				}
-				$dataarraykey++;
-				$multiply = null;
-			} else throw new StructException("Unkown format or modifier supplied (".$currentformatchar." at offset ".$offset.").");
-		}
-		var_dump($dataarray);
 		$result = []; // Data to return
-		$packcommand = $this->parseformat($format); // Get unpack parameters
+		$packcommand = $this->parseformat($format, $this->array_each_strlen($dataarray), true); // Get unpack parameters
 		set_error_handler([$this, 'ExceptionErrorHandler']);
 		foreach ($packcommand as $key => $command) {
 			if(isset($command["modifiers"]["BIG_ENDIAN"]) && ((!$this->BIG_ENDIAN && $command["modifiers"]["BIG_ENDIAN"]) || ($this->BIG_ENDIAN && !$command["modifiers"]["BIG_ENDIAN"]))) $data[$key] = strrev($data[$key]); // Reverse if wrong endianness
@@ -196,69 +191,25 @@ class Struct {
 	 */
 	public function calcsize($format) {
 		$size = 0;
-		$multiply = null;
+		$modifier = $this->MODIFIERS["@"];
+
 		foreach (str_split($format) as $offset => $currentformatchar) {
+			if(!isset($multiply)) $multiply = null;
 			if(isset($this->MODIFIERS[$currentformatchar])) {
-				// Nuffink for now
+				$modifier = $this->MODIFIERS[$currentformatchar]; // Set the modifiers for the current format char
 			} else if(is_numeric($currentformatchar) && ((int)$currentformatchar > 0 || (int)$currentformatchar <= 9)) {
 				$multiply .= $currentformatchar; // Set the count for the current format char
-			} else if(isset($this->LENGTH[$currentformatchar])) {
+			} else if(isset($modifier["LENGTH"][$currentformatchar])) {
 				if(!isset($multiply) || $multiply == null) {
 					$multiply = 1; // Set count to 1 if something's wrong.
 				}
-				$size += $multiply * $this->LENGTH[$currentformatchar];
-
-				$multiply = null;
+				$size += $multiply * $modifier["LENGTH"][$currentformatchar];
 			} else throw new StructException("Unkown format or modifier supplied (".$currentformatchar." at offset ".$offset.").");
 		}
 		return $size;
 	}
 
 
-	/**
-	 * checkvalues
-	 *
-	 * Check values.
-	 *
-	 * @throws	StructException if format string is too long or there aren't enough parameters or if an unkown format or modifier is supplied.
-	 * @param	$format		Format string to parse
-	 * @param	$array 		Array containing the values to check
- 	 * @param	$array 		false is called from unpack
-
-	 * @return 	true if everything is ok
-	 */
-	public function checkvalues($format, $array, $reverse = false) {
-		$formatcharcount = 0; // Current element in the format string (without considering modifiers)
-		$count = null; // Set the count of the objects to decode in the data array
-		$modifiers = $this->MODIFIERS["@"];
-
-		foreach (str_split($format) as $offset => $currentformatchar) { // Current format char
-			if(isset($this->MODIFIERS[$currentformatchar])) { // If current format char is a modifier
-				$modifiers = $this->MODIFIERS[$currentformatchar]; // Set the modifiers for the current format char
-			} else if(is_numeric($currentformatchar) && ((int)$currentformatchar > 0 || (int)$currentformatchar <= 9)) {
-				$result[$formatcharcount]["count"] .= (int)$currentformatchar; // Set the count for the current format char
-			} else if(isset($this->FORMATS[$currentformatchar])) {
-				if(!isset($result[$formatcharcount]["count"]) || $result[$formatcharcount]["count"] == 0 || $result[$formatcharcount]["count"] == null) {
-					$result[$formatcharcount]["count"] = 1; // Set count to 1 if something's wrong.
-				}
-				$result[$formatcharcount]["format"] = $currentformatchar; // Set format
-				if($arraycount !== null) {
-					if($datarraycount + 1 > count($arraycount)) {
-						throw new StructException("Format string too long or not enough parameters at offset ".$offset.".");
-					}
-					if($result[$datarraycount]["count"] > $arraycount[$datarraycount]) {
-						throw new StructException("Format string too long at offset ".$offset.".");
-					}
-				}
-				if($currentformatchar != "x") {
-					$result[$formatcharcount]["datacount"] = $datarraycount;
-					$datarraycount++;
-				}
-				$formatcharcount++; // Increase element count
-				$count = null;			
-			} else throw new StructException("Unkown format or modifier supplied at offset ".$offset." (".$currentformatchar.").");
-		}
-	}
 
 	/**
 	 * parseformat
@@ -270,44 +221,69 @@ class Struct {
 	 * @param	$arraycount Array containing the number of chars contained in each element of the array to pack
 	 * @return 	Array with format and modifiers for each object to encode/decode
 	 */
-	public function parseformat($format, $arraycount, $usex = false) {
-		$datarraycount = 0; // Current element to decode/encode
-		$formatcharcount = 0; // Current element to decode/encode (for real)
-		$modifiers = $this->MODIFIERS["@"];
+	public function parseformat($format, $arraycount, $unpack = false) {
+		$datarraycount = 0; // Current element of the array to pack/unpack
+		$formatcharcount = 0; // Current element to pack/unpack (sometimes there isn't a correspondant element in the array)
+		$modifier = $this->MODIFIERS["@"];
 		$result = []; // Array with the results
-		$result[$formatcharcount]["count"] = null; // Set the count of the objects to decode for the current format char to 0
 		foreach (str_split($format) as $offset => $currentformatchar) { // Current format char
 			if(!isset($result[$formatcharcount]) || !is_array($result[$formatcharcount]))	{
 				$result[$formatcharcount] = []; // Create array for current element
 			}
+			if(!isset($result[$formatcharcount]["count"])) $result[$formatcharcount]["count"] = null;
 			if(isset($this->MODIFIERS[$currentformatchar])) { // If current format char is a modifier
-				$modifiers = $this->MODIFIERS[$currentformatchar]; // Set the modifiers for the current format char
-			} else if(is_numeric($currentformatchar) && ((int)$currentformatchar > 0 || (int)$currentformatchar <= 9)) {
+				$modifier = $this->MODIFIERS[$currentformatchar]; // Set the modifiers for the current format char
+			} else if(is_numeric($currentformatchar) && ((int)$currentformatchar >= 0 || (int)$currentformatchar <= 9)) {
 				$result[$formatcharcount]["count"] .= (int)$currentformatchar; // Set the count for the current format char
 			} else if(isset($this->FORMATS[$currentformatchar])) {
-				if(!isset($result[$formatcharcount]["count"]) || $result[$formatcharcount]["count"] == 0 || $result[$formatcharcount]["count"] == null) {
+				if(!isset($result[$formatcharcount]["count"]) || $result[$formatcharcount]["count"] == null) {
 					$result[$formatcharcount]["count"] = 1; // Set count to 1 if something's wrong.
 				}
 				$result[$formatcharcount]["format"] = $currentformatchar; // Set format
-				$result[$formatcharcount]["modifiers"] = $modifiers;
-
-				if($arraycount !== null) {
-					if($datarraycount + 1 > count($arraycount)) {
-						throw new StructException("Format string too long or not enough parameters at offset ".$offset.".");
-					}
-					if($result[$datarraycount]["count"] > $arraycount[$datarraycount]) {
-						throw new StructException("Format string too long at offset ".$offset.".");
-					}
+				$result[$formatcharcount]["modifiers"] = $modifier;
+				if($datarraycount + 1 > count($arraycount)) {
+					throw new StructException("Format string too long or not enough parameters at offset ".$offset.".");
 				}
-				if($currentformatchar != "x" || $usex) {
+				if($result[$datarraycount]["count"] != $arraycount[$datarraycount] && !$unpack && $currentformatchar != "x") {
+					throw new StructException("Count for format string " . $result[$formatcharcount]["format"] . " at offset ".$offset." isn't equal to the length of associated parameter.");
+				}
+				if($result[$datarraycount]["count"] != $arraycount[$datarraycount] * $modifier["LENGTH"][$result[$formatcharcount]["format"]] && $unpack) {
+					throw new StructException("Length for format string " . $result[$formatcharcount]["format"] . " at ".$offset." isn't equal to the length of associated parameter.");
+				}
+				if($currentformatchar != "x" || $unpack) {
 					$result[$formatcharcount]["datacount"] = $datarraycount;
 					$datarraycount++;
 				}
 				$formatcharcount++; // Increase element count
-				$result[$formatcharcount]["count"] = null; // Set the count of the objects to decode for the current format char to 0			
 			} else throw new StructException("Unkown format or modifier supplied at offset ".$offset." (".$currentformatchar.").");
 		}
 		return $result;	
+	}
+
+	public function data2array($format, $data) {
+		$dataarray = [];
+		$dataarraykey = 0;
+		$datakey = 0;
+		$modifier = $this->MODIFIERS["@"];
+		foreach (str_split($format) as $offset => $currentformatchar) {
+			if(!isset($multiply)) $multiply = null;
+			if(isset($this->MODIFIERS[$currentformatchar])) {
+				$modifier = $this->MODIFIERS[$currentformatchar]; // Set the modifiers for the current format char
+			} else if(is_numeric($currentformatchar) && ((int)$currentformatchar > 0 || (int)$currentformatchar <= 9)) {
+				$multiply .= $currentformatchar; // Set the count for the current format char
+			} else if(isset($modifier["LENGTH"][$currentformatchar])) {
+				if(!isset($multiply) || $multiply == null) {
+					$multiply = 1; // Set count to 1 if something's wrong.
+				}
+				for ($x = 0;$x < $multiply;$x++){
+					$dataarray[$dataarraykey] = $data[$datakey];
+					$datakey++;
+				}
+				$dataarraykey++;
+				unset($multiply);
+			} else throw new StructException("Unkown format or modifier supplied (".$currentformatchar." at offset ".$offset.").");
+		}
+		return $dataarray;
 	}
 	/**
 	 * array_each_strlen
