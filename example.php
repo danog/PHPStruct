@@ -5,4 +5,9 @@ require('lib/danog/PHP/Struct.php');
 $struct = new danog\PHP\Struct();
 
 
-var_dump($struct->unpack(">2cx2c?iflh", $struct->pack(">2cx2c?iflh", "fa", "fs", true, 45, 2.1, 5000, 5005)));
+var_dump($struct->unpack(">2cxbBx?xhxHxixIxlxLxqxQxnxNxfxdx2sx", 
+	   $struct->pack(">2cxbBx?xhxHxixIxlxLxqxQxnxNxfxdx2sx", 
+"nv", 61, 61, false, 333, 444, 232423, 234342, 243342423424, 234234234234, 234234234234, 234234234234, 34434, 344434, 2.2343, 3.03424, "dd"
+
+)
+));

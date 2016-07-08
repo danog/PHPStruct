@@ -47,6 +47,8 @@ class Struct {
 			"q" => "q",
 			"Q" => "Q",
 			"s" => "a",
+			"n" => "i",
+			"N" => "I",
 		];
 		$this->SIZE = [
 			"p" => 1, 
@@ -62,11 +64,13 @@ class Struct {
 			"B" => 1,
 			"h" => 2,
 			"H" => 2,
-			"l" => 8,
-			"L" => 8,
+			"l" => 4,
+			"L" => 4,
 			"q" => 8,
 			"Q" => 8,
 			"s" => 1,
+			"n" => strlen(pack($this->FORMATS["n"], 1)), 
+			"N" => strlen(pack($this->FORMATS["N"], 1)), 
 		];
 		$this->NATIVE_SIZE = [
 			"p" => 1, 
@@ -83,11 +87,18 @@ class Struct {
 			"h" => strlen(pack($this->FORMATS["h"], -700)),
 			"H" => strlen(pack($this->FORMATS["H"], 700)),
 			"l" => strlen(pack($this->FORMATS["l"], -70000000)),
-			"L" => strlen(pack($this->FORMATS["l"], 70000000)),
-			"q" => strlen(pack($this->FORMATS["l"], -70000000)),
-			"Q" => strlen(pack($this->FORMATS["l"], 70000000)),
-			"s" => strlen(pack($this->FORMATS["l"], "c")),
+			"L" => strlen(pack($this->FORMATS["L"], 70000000)),
+			"q" => strlen(pack($this->FORMATS["q"], -70000000)),
+			"Q" => strlen(pack($this->FORMATS["Q"], 70000000)),
+			"s" => strlen(pack($this->FORMATS["s"], "c")),
+			"n" => strlen(pack($this->FORMATS["n"], 1)), 
+			"N" => strlen(pack($this->FORMATS["N"], 1)), 
 		];
+foreach($this->SIZE as $key => $size) {
+if($size != $this->NATIVE_SIZE[$key]) {
+echo $key . " " . $size . " != " . $this->FORMATS[$key] . " " . $this->NATIVE_SIZE[$key] . PHP_EOL;
+}
+}
 		$this->MODIFIERS = [
 			"<" => ["BIG_ENDIAN" => false, "SIZE" => $this->SIZE],
 			">" => ["BIG_ENDIAN" => true, "SIZE" => $this->SIZE],
@@ -133,22 +144,20 @@ class Struct {
 				throw new StructException("An error occurred while packing data at offset " . $key . " (" . $e->getMessage() . ").");
 			}
 			if(((!$this->BIG_ENDIAN && $command["modifiers"]["BIG_ENDIAN"]) || ($this->BIG_ENDIAN && !$command["modifiers"]["BIG_ENDIAN"]))) $curresult = strrev($curresult); // Reverse if wrong endianness
-/*
-			if(strlen($curresult) > $command["modifiers"]["SIZE"]) {
+			if(strlen($curresult) > $command["modifiers"]["SIZE"] * $command["count"]) {
 				if($command["modifiers"]["BIG_ENDIAN"]) {
 					$curresult = strrev($curresult);
 				};
-				$remains = array_slice(str_split($curresult), $command["modifiers"]["SIZE"] * minus, strlen($curresult) - $command["modifiers"]["size"]);
+				$remains = array_slice(str_split($curresult), $command["modifiers"]["SIZE"], strlen($curresult) - $command["modifiers"]["SIZE"]);
 				foreach ($remains as $rem) {
-					if($rem != "") throw new StructException("Error while trimming result at offset " . $offset . " (format char " . $command["format"] . "): data to trim isn't empty.");
+					if($rem != "") throw new StructException("Error while trimming result at offset " . $key . " (format char " . $command["format"] . "): data to trim isn't empty.");
 				}
-				$curresult = join('', array_slice(str_split($curresult), ));
+				$curresult = join('', array_slice(str_split($curresult), 0, $command["modifiers"]["SIZE"]));
 				if($command["modifiers"]["BIG_ENDIAN"]) {
 					$curresult = strrev($curresult);
 				};
-
 			}
-*/
+
 
 			$result .= $curresult;
 		}
