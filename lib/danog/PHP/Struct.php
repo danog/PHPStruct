@@ -48,7 +48,7 @@ class Struct {
 			"Q" => "Q",
 			"s" => "a",
 		];
-		$this->LENGTH = [
+		$this->SIZE = [
 			"p" => 1, 
 			"P" => 8, 
 			"i" => 4, 
@@ -68,7 +68,7 @@ class Struct {
 			"Q" => 8,
 			"s" => 1,
 		];
-		$this->NATIVE_LENGTH = [
+		$this->NATIVE_SIZE = [
 			"p" => 1, 
 			"P" => 8, 
 			"i" => strlen(pack($this->FORMATS["i"], 1)), 
@@ -89,11 +89,11 @@ class Struct {
 			"s" => strlen(pack($this->FORMATS["l"], "c")),
 		];
 		$this->MODIFIERS = [
-			"<" => ["BIG_ENDIAN" => false, "LENGTH" => $this->LENGTH],
-			">" => ["BIG_ENDIAN" => true, "LENGTH" => $this->LENGTH],
-			"!" => ["BIG_ENDIAN" => true, "LENGTH" => $this->LENGTH],
-			"=" => ["BIG_ENDIAN" => $this->BIG_ENDIAN, "LENGTH" => $this->LENGTH],
-			"@" => ["BIG_ENDIAN" => $this->BIG_ENDIAN, "LENGTH" => $this->NATIVE_LENGTH]
+			"<" => ["BIG_ENDIAN" => false, "SIZE" => $this->SIZE],
+			">" => ["BIG_ENDIAN" => true, "SIZE" => $this->SIZE],
+			"!" => ["BIG_ENDIAN" => true, "SIZE" => $this->SIZE],
+			"=" => ["BIG_ENDIAN" => $this->BIG_ENDIAN, "SIZE" => $this->SIZE],
+			"@" => ["BIG_ENDIAN" => $this->BIG_ENDIAN, "SIZE" => $this->NATIVE_SIZE]
 		];
 	} 
 
@@ -126,21 +126,35 @@ class Struct {
 		set_error_handler([$this, 'ExceptionErrorHandler']);
 		foreach ($packcommand as $key => $command) {
 			try {
-				if(isset($command["datacount"])) {
-					$curresult = pack($this->FORMATS[$command["format"]].$command["count"], $data[$command["datacount"]]); // Pack current char
+				if(isset($command["datakey"])) {
+					$curresult = pack($this->FORMATS[$command["format"]].$command["count"], $data[$command["datakey"]]); // Pack current char
 				} else $curresult = pack($this->FORMATS[$command["format"]].$command["count"]); // Pack current char
-				
 			} catch(StructException $e) {
 				throw new StructException("An error occurred while packing data at offset " . $key . " (" . $e->getMessage() . ").");
 			}
-			
-			if(isset($command["modifiers"]["BIG_ENDIAN"]) && ((!$this->BIG_ENDIAN && $command["modifiers"]["BIG_ENDIAN"]) || ($this->BIG_ENDIAN && !$command["modifiers"]["BIG_ENDIAN"]))) $curresult = strrev($curresult); // Reverse if wrong endianness
+			if(((!$this->BIG_ENDIAN && $command["modifiers"]["BIG_ENDIAN"]) || ($this->BIG_ENDIAN && !$command["modifiers"]["BIG_ENDIAN"]))) $curresult = strrev($curresult); // Reverse if wrong endianness
+/*
+			if(strlen($curresult) > $command["modifiers"]["SIZE"]) {
+				if($command["modifiers"]["BIG_ENDIAN"]) {
+					$curresult = strrev($curresult);
+				};
+				$remains = array_slice(str_split($curresult), $command["modifiers"]["SIZE"] * minus, strlen($curresult) - $command["modifiers"]["size"]);
+				foreach ($remains as $rem) {
+					if($rem != "") throw new StructException("Error while trimming result at offset " . $offset . " (format char " . $command["format"] . "): data to trim isn't empty.");
+				}
+				$curresult = join('', array_slice(str_split($curresult), ));
+				if($command["modifiers"]["BIG_ENDIAN"]) {
+					$curresult = strrev($curresult);
+				};
+
+			}
+*/
+
 			$result .= $curresult;
 		}
-
 		restore_error_handler();
 		if(strlen($result) != $this->calcsize($format)) {
-			throw new StructException("Length of generated data is different from length calculated using format string.");
+			throw new StructException("Length of generated data (".strlen($result).") is different from length calculated using format string (".$this->calcsize($format).").");
 		}
 		return $result;
 	}
@@ -157,13 +171,14 @@ class Struct {
 		if(strlen($data) != $this->calcsize($format)) {
 			throw new StructException("Length of given data is different from length calculated using format string.");
 		}
+		$dataarray = $this->data2array($format, $data);
 		$result = []; // Data to return
 		$packcommand = $this->parseformat($format, $this->array_each_strlen($dataarray), true); // Get unpack parameters
 		set_error_handler([$this, 'ExceptionErrorHandler']);
 		foreach ($packcommand as $key => $command) {
-			if(isset($command["modifiers"]["BIG_ENDIAN"]) && ((!$this->BIG_ENDIAN && $command["modifiers"]["BIG_ENDIAN"]) || ($this->BIG_ENDIAN && !$command["modifiers"]["BIG_ENDIAN"]))) $data[$key] = strrev($data[$key]); // Reverse if wrong endianness
+			if(isset($command["modifiers"]["BIG_ENDIAN"]) && ((!$this->BIG_ENDIAN && $command["modifiers"]["BIG_ENDIAN"]) || ($this->BIG_ENDIAN && !$command["modifiers"]["BIG_ENDIAN"]))) $dataarray[$command["datakey"]] = strrev($dataarray[$command["datakey"]]); // Reverse if wrong endianness
 			try {
-				if($command["format"] != "x") $result[$key] = join('', unpack($this->FORMATS[$command["format"]].$command["count"], $data[$key])); // Unpack current char
+				if($command["format"] != "x") $result[$key] = join('', unpack($this->FORMATS[$command["format"]].$command["count"], $dataarray[$command["datakey"]])); // Unpack current char
 			} catch(StructException $e) {
 				throw new StructException("An error occurred while unpacking data at offset " . $key . " (" . $e->getMessage() . ").");
 			}
@@ -199,11 +214,12 @@ class Struct {
 				$modifier = $this->MODIFIERS[$currentformatchar]; // Set the modifiers for the current format char
 			} else if(is_numeric($currentformatchar) && ((int)$currentformatchar > 0 || (int)$currentformatchar <= 9)) {
 				$multiply .= $currentformatchar; // Set the count for the current format char
-			} else if(isset($modifier["LENGTH"][$currentformatchar])) {
+			} else if(isset($modifier["SIZE"][$currentformatchar])) {
 				if(!isset($multiply) || $multiply == null) {
 					$multiply = 1; // Set count to 1 if something's wrong.
 				}
-				$size += $multiply * $modifier["LENGTH"][$currentformatchar];
+				$size += $multiply * $modifier["SIZE"][$currentformatchar];
+				unset($multiply);
 			} else throw new StructException("Unkown format or modifier supplied (".$currentformatchar." at offset ".$offset.").");
 		}
 		return $size;
@@ -240,19 +256,23 @@ class Struct {
 					$result[$formatcharcount]["count"] = 1; // Set count to 1 if something's wrong.
 				}
 				$result[$formatcharcount]["format"] = $currentformatchar; // Set format
-				$result[$formatcharcount]["modifiers"] = $modifier;
+				$result[$formatcharcount]["modifiers"] = ["BIG_ENDIAN" => $modifier["BIG_ENDIAN"], "SIZE" => $modifier["SIZE"][$currentformatchar] ];
+
 				if($datarraycount + 1 > count($arraycount)) {
 					throw new StructException("Format string too long or not enough parameters at offset ".$offset.".");
 				}
-				if($result[$datarraycount]["count"] != $arraycount[$datarraycount] && !$unpack && $currentformatchar != "x") {
-					throw new StructException("Count for format string " . $result[$formatcharcount]["format"] . " at offset ".$offset." isn't equal to the length of associated parameter.");
-				}
-				if($result[$datarraycount]["count"] != $arraycount[$datarraycount] * $modifier["LENGTH"][$result[$formatcharcount]["format"]] && $unpack) {
-					throw new StructException("Length for format string " . $result[$formatcharcount]["format"] . " at ".$offset." isn't equal to the length of associated parameter.");
-				}
-				if($currentformatchar != "x" || $unpack) {
-					$result[$formatcharcount]["datacount"] = $datarraycount;
+
+				if($unpack) {
+					if($arraycount[$datarraycount] != $result[$formatcharcount]["count"] * $result[$formatcharcount]["modifiers"]["SIZE"]) {
+						throw new StructException("Length for format string " . $result[$formatcharcount]["format"] . " at offset ".$offset." (".$result[$formatcharcount]["count"] * $result[$formatcharcount]["modifiers"]["SIZE"].") isn't equal to the length of associated parameter (".$arraycount[$datarraycount].").");
+					}
+					$result[$formatcharcount]["datakey"] = $datarraycount;
 					$datarraycount++;
+				} else {
+					if($currentformatchar != "x") {
+						$result[$formatcharcount]["datakey"] = $datarraycount;
+						$datarraycount++;
+					}
 				}
 				$formatcharcount++; // Increase element count
 			} else throw new StructException("Unkown format or modifier supplied at offset ".$offset." (".$currentformatchar.").");
@@ -271,12 +291,12 @@ class Struct {
 				$modifier = $this->MODIFIERS[$currentformatchar]; // Set the modifiers for the current format char
 			} else if(is_numeric($currentformatchar) && ((int)$currentformatchar > 0 || (int)$currentformatchar <= 9)) {
 				$multiply .= $currentformatchar; // Set the count for the current format char
-			} else if(isset($modifier["LENGTH"][$currentformatchar])) {
+			} else if(isset($modifier["SIZE"][$currentformatchar])) {
 				if(!isset($multiply) || $multiply == null) {
 					$multiply = 1; // Set count to 1 if something's wrong.
 				}
-				for ($x = 0;$x < $multiply;$x++){
-					$dataarray[$dataarraykey] = $data[$datakey];
+				for ($x = 0;$x < $multiply * $modifier["SIZE"][$currentformatchar];$x++){
+					$dataarray[$dataarraykey] .= $data[$datakey];
 					$datakey++;
 				}
 				$dataarraykey++;
