@@ -5,4 +5,4 @@ php:
   - nightly
 
 script:
-  - phpunit --bootstrap lib/danog/PHP/StructException.php --bootstrap lib/danog/PHP/Struct.php tests/danog/PHP/StructTest.php --verbose
+  - phpunit --bootstrap lib/danog/PHP/Struct.php tests/danog/PHP/StructTest.php --verbose

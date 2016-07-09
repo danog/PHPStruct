@@ -166,17 +166,17 @@ class Struct {
 			try {
 				switch ($command["modifiers"]["TYPE"]){
 					case 'int':
-						if(!is_integer($data[$command["datakey"]])) throw new StructException("Cannot convert argument to integer.");
+						if(!is_integer($data[$command["datakey"]])) throw new StructException("Required argument is not an integer.");
 						break;
 					case 'float':
-						if(!is_float($data[$command["datakey"]])) throw new StructException("Cannot convert argument to float.");
+						if(!is_float($data[$command["datakey"]])) throw new StructException("Required argument is not a float.");
 
 						break;
 					case 'string':
-						if(!is_string($data[$command["datakey"]])) throw new StructException("Cannot convert argument to string.");
+						if(!is_string($data[$command["datakey"]])) throw new StructException("Required argument is not a string.");
 						break;
 					case 'bool':
-						if(!is_bool($data[$command["datakey"]])) throw new StructException("Cannot convert argument to bool.");
+						if(!is_bool($data[$command["datakey"]])) throw new StructException("Required argument is not a bool.");
 						break;
 					default:
 						break;
@@ -201,8 +201,6 @@ class Struct {
 					$curresult = strrev($curresult);
 				};
 			}
-
-
 			$result .= $curresult;
 		}
 		restore_error_handler();
@@ -283,7 +281,6 @@ class Struct {
 	public function calcsize($format) {
 		$size = 0;
 		$modifier = $this->MODIFIERS["@"];
-
 		foreach (str_split($format) as $offset => $currentformatchar) {
 			if(!isset($multiply)) $multiply = null;
 			if(isset($this->MODIFIERS[$currentformatchar])) {
@@ -415,4 +412,11 @@ class Struct {
 /* Just an exception class */
 class StructException extends \Exception
 {
+	public function __construct($message, $code = 0, Exception $previous = null) {
+        // some code
+		if (isset($GLOBALS["doingphptests"]) && $GLOBALS["doingphptests"]) var_dump($message);
+    
+        // make sure everything is assigned properly
+        parent::__construct($message, $code, $previous);
+    }
 }
