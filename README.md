@@ -23,7 +23,23 @@ composer require danog/phpstruct
 
 ```
 require('vendor/autoload.php');
-$rightpack = new \danog\PHP\Struct();
+$struct = new \danog\PHP\Struct();
+$pack = $struct->pack("2cxi", "ab", 44);
+$unpack = $struct->unpack("2cxi", $pack);
+var_dump($unpack);
+$count = $struct->calcsize("2cxi");
 ```
+
+This library can also be used statically:
+
+
+```
+require('vendor/autoload.php');
+$pack = \danog\PHP\Struct::pack("2cxi", "ab", 44);
+$unpack = \danog\PHP\Struct::unpack("2cxi", $pack);
+var_dump($unpack);
+$count = \danog\PHP\Struct::calcsize("2cxi");
+```
+
 
 [Daniil Gentili](http://daniil.it)

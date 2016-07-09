@@ -159,6 +159,10 @@ class Struct {
 	 * @return 	Encoded data 
 	 */
 	public function pack($format, ...$data) {
+		if(!(isset($this) && get_class($this) == __CLASS__)) {
+			$struct = new \danog\PHP\Struct();
+			return $struct->pack($format, ...$data);
+		}
 		$result = null; // Data to return
 		$packcommand = $this->parseformat($format, $this->array_each_strlen($data)); // Get pack parameters
 		set_error_handler([$this, 'ExceptionErrorHandler']);
@@ -219,6 +223,11 @@ class Struct {
 	 * @return 	Decoded data 
 	 */
 	public function unpack($format, $data) {
+
+		if(!(isset($this) && get_class($this) == __CLASS__)) {
+			$struct = new \danog\PHP\Struct();
+			return $struct->unpack($format, $data);
+		}
 		if(strlen($data) != $this->calcsize($format)) {
 			throw new StructException("Length of given data is different from length calculated using format string.");
 		}
@@ -279,6 +288,11 @@ class Struct {
 	 * @return 	Int with size of the struct.
 	 */
 	public function calcsize($format) {
+
+		if(!(isset($this) && get_class($this) == __CLASS__)) {
+			$struct = new \danog\PHP\Struct();
+			return $struct->calcsize($format);
+		}
 		$size = 0;
 		$modifier = $this->MODIFIERS["@"];
 		foreach (str_split($format) as $offset => $currentformatchar) {
