@@ -23,10 +23,10 @@ class Struct {
 	 */
 	public function __construct(){
 		$this->BIG_ENDIAN = (pack('L', 1) === pack('N', 1));
+		$this->IS64BIT = (PHP_INT_SIZE===8);
 		$this->FORMATS = [
 			// These formats need to be modified after/before encoding/decoding.
 			"p" => "p", // “Pascal string”, meaning a short variable-length string stored in a fixed number of bytes, given by the count. The first byte stored is the length of the string, or 255, whichever is smaller. The bytes of the string follow. If the string passed in to pack() is too long (longer than the count minus 1), only the leading count-1 bytes of the string are stored. If the string is shorter than count-1, it is padded with null bytes so that exactly count bytes in all are used. Note that for unpack(), the 'p' format character consumes count bytes, but that the string returned can never contain more than 255 characters.
-			"P" => "P", // integer or long integer, depending on the size needed to hold a pointer when it has been cast to an integer type. A NULL pointer will always be returned as the Python integer 0. When packing pointer-sized values, Python integer or long integer objects may be used. For example, the Alpha and Merced processors use 64-bit pointer values, meaning a Python long integer will be used to hold the pointer; other platforms use 32-bit pointers and will use a Python integer.
 
 			// These formats have automatical byte size, this must be fixed.
 			"i" => "i", // should be 4 (32 bit)
@@ -44,15 +44,16 @@ class Struct {
 			"H" => "S",
 			"l" => "l",
 			"L" => "L",
-			"q" => "q",
-			"Q" => "Q",
 			"s" => "a",
+		];
+		$this->NATIVE_FORMATS = array_merge([
+			// These formats need to be modified after/before encoding/decoding.
+			"P" => "P", // integer or long integer, depending on the size needed to hold a pointer when it has been cast to an integer type. A NULL pointer will always be returned as the Python integer 0. When packing pointer-sized values, Python integer or long integer objects may be used. For example, the Alpha and Merced processors use 64-bit pointer values, meaning a Python long integer will be used to hold the pointer; other platforms use 32-bit pointers and will use a Python integer.
 			"n" => "i",
 			"N" => "I",
-		];
+		], $this->FORMATS);
 		$this->SIZE = [
 			"p" => 1, 
-			"P" => 8, 
 			"i" => 4, 
 			"I" => 4, 
 			"f" => 4, 
@@ -66,46 +67,72 @@ class Struct {
 			"H" => 2,
 			"l" => 4,
 			"L" => 4,
-			"q" => 8,
-			"Q" => 8,
 			"s" => 1,
-			"n" => strlen(pack($this->FORMATS["n"], 1)), 
-			"N" => strlen(pack($this->FORMATS["N"], 1)), 
 		];
 		$this->NATIVE_SIZE = [
 			"p" => 1, 
 			"P" => 8, 
-			"i" => strlen(pack($this->FORMATS["i"], 1)), 
-			"I" => strlen(pack($this->FORMATS["I"], 1)), 
-			"f" => strlen(pack($this->FORMATS["f"], 2.0)), 
-			"d" => strlen(pack($this->FORMATS["d"], 2.0)), 
-			"c" => strlen(pack($this->FORMATS["c"], "a")),
-			"?" => strlen(pack($this->FORMATS["?"], false)),
-			"x" => strlen(pack($this->FORMATS["x"])),
-			"b" => strlen(pack($this->FORMATS["b"], "c")),
-			"B" => strlen(pack($this->FORMATS["B"], "c")),
-			"h" => strlen(pack($this->FORMATS["h"], -700)),
-			"H" => strlen(pack($this->FORMATS["H"], 700)),
-			"l" => strlen(pack($this->FORMATS["l"], -70000000)),
-			"L" => strlen(pack($this->FORMATS["L"], 70000000)),
-			"q" => strlen(pack($this->FORMATS["q"], -70000000)),
-			"Q" => strlen(pack($this->FORMATS["Q"], 70000000)),
-			"s" => strlen(pack($this->FORMATS["s"], "c")),
-			"n" => strlen(pack($this->FORMATS["n"], 1)), 
-			"N" => strlen(pack($this->FORMATS["N"], 1)), 
+			"i" => strlen(pack($this->NATIVE_FORMATS["i"], 1)), 
+			"I" => strlen(pack($this->NATIVE_FORMATS["I"], 1)), 
+			"f" => strlen(pack($this->NATIVE_FORMATS["f"], 2.0)), 
+			"d" => strlen(pack($this->NATIVE_FORMATS["d"], 2.0)), 
+			"c" => strlen(pack($this->NATIVE_FORMATS["c"], "a")),
+			"?" => strlen(pack($this->NATIVE_FORMATS["?"], false)),
+			"x" => strlen(pack($this->NATIVE_FORMATS["x"])),
+			"b" => strlen(pack($this->NATIVE_FORMATS["b"], "c")),
+			"B" => strlen(pack($this->NATIVE_FORMATS["B"], "c")),
+			"h" => strlen(pack($this->NATIVE_FORMATS["h"], -700)),
+			"H" => strlen(pack($this->NATIVE_FORMATS["H"], 700)),
+			"l" => strlen(pack($this->NATIVE_FORMATS["l"], -70000000)),
+			"L" => strlen(pack($this->NATIVE_FORMATS["L"], 70000000)),
+			"s" => strlen(pack($this->NATIVE_FORMATS["s"], "c")),
+			"n" => strlen(pack($this->NATIVE_FORMATS["n"], 1)), 
+			"N" => strlen(pack($this->NATIVE_FORMATS["N"], 1)), 
 		];
-foreach($this->SIZE as $key => $size) {
-if($size != $this->NATIVE_SIZE[$key]) {
-echo $key . " " . $size . " != " . $this->FORMATS[$key] . " " . $this->NATIVE_SIZE[$key] . PHP_EOL;
-}
-}
+		$this->TYPE = [
+			"p" => "string", 
+			"i" => "int", 
+			"I" => "int", 
+			"f" => "float", 
+			"d" => "float", 
+			"c" => "string",
+			"?" => "bool",
+			"x" => "unset",
+			"b" => "int",
+			"B" => "int",
+			"h" => "int",
+			"H" => "int",
+			"l" => "int",
+			"L" => "int",
+			"s" => "string",
+		];
+		$this->NATIVE_TYPE = array_merge([
+			"P" => "int", // integer or long integer, depending on the size needed to hold a pointer when it has been cast to an integer type. A NULL pointer will always be returned as the Python integer 0. When packing pointer-sized values, Python integer or long integer objects may be used. For example, the Alpha and Merced processors use 64-bit pointer values, meaning a Python long integer will be used to hold the pointer; other platforms use 32-bit pointers and will use a Python integer.
+			"n" => "int",
+			"N" => "int",
+		], $this->TYPE);
+		if($this->IS64BIT) {
+			$this->FORMATS["q"] = "q";
+			$this->FORMATS["Q"] = "Q";
+			$this->NATIVE_FORMATS["q"] = "q";
+			$this->NATIVE_FORMATS["Q"] = "Q";
+			$this->SIZE["q"] = 8;
+			$this->SIZE["Q"] = 8;
+			$this->NATIVE_SIZE["q"] = strlen(pack($this->NATIVE_FORMATS["q"], -70000000));
+			$this->NATIVE_SIZE["Q"] = strlen(pack($this->NATIVE_FORMATS["Q"], 70000000));
+			$this->TYPE["q"] = "int";
+			$this->TYPE["Q"] = "int";
+			$this->NATIVE_TYPE["q"] = "int";
+			$this->NATIVE_TYPE["Q"] = "int";
+		}
 		$this->MODIFIERS = [
-			"<" => ["BIG_ENDIAN" => false, "SIZE" => $this->SIZE],
-			">" => ["BIG_ENDIAN" => true, "SIZE" => $this->SIZE],
-			"!" => ["BIG_ENDIAN" => true, "SIZE" => $this->SIZE],
-			"=" => ["BIG_ENDIAN" => $this->BIG_ENDIAN, "SIZE" => $this->SIZE],
-			"@" => ["BIG_ENDIAN" => $this->BIG_ENDIAN, "SIZE" => $this->NATIVE_SIZE]
+			"<" => ["BIG_ENDIAN" => false, "SIZE" => $this->SIZE, "FORMATS" => $this->FORMATS, "TYPE" => $this->TYPE],
+			">" => ["BIG_ENDIAN" => true, "SIZE" => $this->SIZE, "FORMATS" => $this->FORMATS, "TYPE" => $this->TYPE],
+			"!" => ["BIG_ENDIAN" => true, "SIZE" => $this->SIZE, "FORMATS" => $this->FORMATS, "TYPE" => $this->TYPE],
+			"=" => ["BIG_ENDIAN" => $this->BIG_ENDIAN, "SIZE" => $this->SIZE, "FORMATS" => $this->FORMATS, "TYPE" => $this->TYPE],
+			"@" => ["BIG_ENDIAN" => $this->BIG_ENDIAN, "SIZE" => $this->NATIVE_SIZE, "FORMATS" => $this->NATIVE_FORMATS, "TYPE" => $this->NATIVE_TYPE]
 		];
+
 	} 
 
 	/**
@@ -137,9 +164,26 @@ echo $key . " " . $size . " != " . $this->FORMATS[$key] . " " . $this->NATIVE_SI
 		set_error_handler([$this, 'ExceptionErrorHandler']);
 		foreach ($packcommand as $key => $command) {
 			try {
+				switch ($command["modifiers"]["TYPE"]){
+					case 'int':
+						if(!is_integer($data[$command["datakey"]])) throw new StructException("Cannot convert argument to integer.");
+						break;
+					case 'float':
+						if(!is_float($data[$command["datakey"]])) throw new StructException("Cannot convert argument to float.");
+
+						break;
+					case 'string':
+						if(!is_string($data[$command["datakey"]])) throw new StructException("Cannot convert argument to string.");
+						break;
+					case 'bool':
+						if(!is_bool($data[$command["datakey"]])) throw new StructException("Cannot convert argument to bool.");
+						break;
+					default:
+						break;
+				}
 				if(isset($command["datakey"])) {
-					$curresult = pack($this->FORMATS[$command["format"]].$command["count"], $data[$command["datakey"]]); // Pack current char
-				} else $curresult = pack($this->FORMATS[$command["format"]].$command["count"]); // Pack current char
+					$curresult = pack($command["phpformat"].$command["count"], $data[$command["datakey"]]); // Pack current char
+				} else $curresult = pack($command["phpformat"].$command["count"]); // Pack current char
 			} catch(StructException $e) {
 				throw new StructException("An error occurred while packing data at offset " . $key . " (" . $e->getMessage() . ").");
 			}
@@ -184,20 +228,43 @@ echo $key . " " . $size . " != " . $this->FORMATS[$key] . " " . $this->NATIVE_SI
 		$result = []; // Data to return
 		$packcommand = $this->parseformat($format, $this->array_each_strlen($dataarray), true); // Get unpack parameters
 		set_error_handler([$this, 'ExceptionErrorHandler']);
+		$arraycount = 0;
 		foreach ($packcommand as $key => $command) {
 			if(isset($command["modifiers"]["BIG_ENDIAN"]) && ((!$this->BIG_ENDIAN && $command["modifiers"]["BIG_ENDIAN"]) || ($this->BIG_ENDIAN && !$command["modifiers"]["BIG_ENDIAN"]))) $dataarray[$command["datakey"]] = strrev($dataarray[$command["datakey"]]); // Reverse if wrong endianness
 			try {
-				if($command["format"] != "x") $result[$key] = join('', unpack($this->FORMATS[$command["format"]].$command["count"], $dataarray[$command["datakey"]])); // Unpack current char
+				$result[$arraycount] = join('', unpack($command["phpformat"].$command["count"], $dataarray[$command["datakey"]])); // Unpack current char
 			} catch(StructException $e) {
 				throw new StructException("An error occurred while unpacking data at offset " . $key . " (" . $e->getMessage() . ").");
 			}
 			switch ($command["format"]) {
 				case '?':
-					if ($result[$key] == 0) $result[$key] = false; else $result[$key] = true;
+					if ($result[$arraycount] == 0) $result[$arraycount] = false; else $result[$arraycount] = true;
 					break;
 				default:
 					break;
 			}
+			switch ($command["modifiers"]["TYPE"]){
+				case 'int':
+					$result[$arraycount] = (int)$result[$arraycount];
+					break;
+				case 'float':
+					$result[$arraycount] = (float)$result[$arraycount];
+					break;
+				case 'string':
+					$result[$arraycount] = (string)$result[$arraycount];
+					break;
+				case 'bool':
+					$result[$arraycount] = (bool)$result[$arraycount];
+					break;
+				case 'unset':
+					unset($result[$arraycount]);
+					$arraycount--;
+					break;
+				default:
+					$result[$arraycount] = (string)$result[$arraycount];
+					break;
+			}
+			$arraycount++;
 		}
 		restore_error_handler();
 		return $result;
@@ -260,17 +327,13 @@ echo $key . " " . $size . " != " . $this->FORMATS[$key] . " " . $this->NATIVE_SI
 				$modifier = $this->MODIFIERS[$currentformatchar]; // Set the modifiers for the current format char
 			} else if(is_numeric($currentformatchar) && ((int)$currentformatchar >= 0 || (int)$currentformatchar <= 9)) {
 				$result[$formatcharcount]["count"] .= (int)$currentformatchar; // Set the count for the current format char
-			} else if(isset($this->FORMATS[$currentformatchar])) {
+			} else if(isset($modifier["FORMATS"][$currentformatchar])) {
 				if(!isset($result[$formatcharcount]["count"]) || $result[$formatcharcount]["count"] == null) {
 					$result[$formatcharcount]["count"] = 1; // Set count to 1 if something's wrong.
 				}
 				$result[$formatcharcount]["format"] = $currentformatchar; // Set format
-				$result[$formatcharcount]["modifiers"] = ["BIG_ENDIAN" => $modifier["BIG_ENDIAN"], "SIZE" => $modifier["SIZE"][$currentformatchar] ];
-
-				if($datarraycount + 1 > count($arraycount)) {
-					throw new StructException("Format string too long or not enough parameters at offset ".$offset.".");
-				}
-
+				$result[$formatcharcount]["phpformat"] = $modifier["FORMATS"][$currentformatchar]; // Set format
+				$result[$formatcharcount]["modifiers"] = ["BIG_ENDIAN" => $modifier["BIG_ENDIAN"], "SIZE" => $modifier["SIZE"][$currentformatchar], "TYPE" => $modifier["TYPE"][$currentformatchar] ];
 				if($unpack) {
 					if($arraycount[$datarraycount] != $result[$formatcharcount]["count"] * $result[$formatcharcount]["modifiers"]["SIZE"]) {
 						throw new StructException("Length for format string " . $result[$formatcharcount]["format"] . " at offset ".$offset." (".$result[$formatcharcount]["count"] * $result[$formatcharcount]["modifiers"]["SIZE"].") isn't equal to the length of associated parameter (".$arraycount[$datarraycount].").");
@@ -282,6 +345,9 @@ echo $key . " " . $size . " != " . $this->FORMATS[$key] . " " . $this->NATIVE_SI
 						$result[$formatcharcount]["datakey"] = $datarraycount;
 						$datarraycount++;
 					}
+				}
+				if($datarraycount > count($arraycount)) {
+					throw new StructException("Format string too long or not enough parameters at offset ".$offset." (".$currentformatchar.").");
 				}
 				$formatcharcount++; // Increase element count
 			} else throw new StructException("Unkown format or modifier supplied at offset ".$offset." (".$currentformatchar.").");
@@ -305,6 +371,7 @@ echo $key . " " . $size . " != " . $this->FORMATS[$key] . " " . $this->NATIVE_SI
 					$multiply = 1; // Set count to 1 if something's wrong.
 				}
 				for ($x = 0;$x < $multiply * $modifier["SIZE"][$currentformatchar];$x++){
+					if(!isset($dataarray[$dataarraykey])) $dataarray[$dataarraykey] = null;
 					$dataarray[$dataarraykey] .= $data[$datakey];
 					$datakey++;
 				}
