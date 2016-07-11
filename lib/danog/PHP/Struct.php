@@ -288,25 +288,24 @@ class Struct {
 	 * @return 	Int with size of the struct.
 	 */
 	public function calcsize($format) {
-
 		if(!(isset($this) && get_class($this) == __CLASS__)) {
 			$struct = new \danog\PHP\Struct();
 			return $struct->calcsize($format);
 		}
 		$size = 0;
 		$modifier = $this->MODIFIERS["@"];
+		$count = null;
 		foreach (str_split($format) as $offset => $currentformatchar) {
-			if(!isset($multiply)) $multiply = null;
 			if(isset($this->MODIFIERS[$currentformatchar])) {
 				$modifier = $this->MODIFIERS[$currentformatchar]; // Set the modifiers for the current format char
 			} else if(is_numeric($currentformatchar) && ((int)$currentformatchar > 0 || (int)$currentformatchar <= 9)) {
-				$multiply .= $currentformatchar; // Set the count for the current format char
+				$count .= $currentformatchar; // Set the count for the current format char
 			} else if(isset($modifier["SIZE"][$currentformatchar])) {
-				if(!isset($multiply) || $multiply == null) {
-					$multiply = 1; // Set count to 1 if something's wrong.
+				if(!isset($count) || $count == null) {
+					$count = 1; // Set count to 1 if something's wrong.
 				}
-				$size += $multiply * $modifier["SIZE"][$currentformatchar];
-				unset($multiply);
+				$size += $count * $modifier["SIZE"][$currentformatchar];
+				$count = null;
 			} else throw new StructException("Unkown format or modifier supplied (".$currentformatchar." at offset ".$offset.").");
 		}
 		return $size;
@@ -329,38 +328,49 @@ class Struct {
 		$formatcharcount = 0; // Current element to pack/unpack (sometimes there isn't a correspondant element in the array)
 		$modifier = $this->MODIFIERS["@"];
 		$result = []; // Array with the results
+		$count = null;
+		$loopcount = 0;
 		foreach (str_split($format) as $offset => $currentformatchar) { // Current format char
 			if(!isset($result[$formatcharcount]) || !is_array($result[$formatcharcount]))	{
 				$result[$formatcharcount] = []; // Create array for current element
 			}
-			if(!isset($result[$formatcharcount]["count"])) $result[$formatcharcount]["count"] = null;
 			if(isset($this->MODIFIERS[$currentformatchar])) { // If current format char is a modifier
 				$modifier = $this->MODIFIERS[$currentformatchar]; // Set the modifiers for the current format char
 			} else if(is_numeric($currentformatchar) && ((int)$currentformatchar >= 0 || (int)$currentformatchar <= 9)) {
-				$result[$formatcharcount]["count"] .= (int)$currentformatchar; // Set the count for the current format char
+				$count .= (int)$currentformatchar; // Set the count for the current format char
 			} else if(isset($modifier["FORMATS"][$currentformatchar])) {
-				if(!isset($result[$formatcharcount]["count"]) || $result[$formatcharcount]["count"] == null) {
-					$result[$formatcharcount]["count"] = 1; // Set count to 1 if something's wrong.
+				if(!isset($count) || $count == null) {
+					$count = 1; // Set count to 1 by default.
 				}
-				$result[$formatcharcount]["format"] = $currentformatchar; // Set format
-				$result[$formatcharcount]["phpformat"] = $modifier["FORMATS"][$currentformatchar]; // Set format
-				$result[$formatcharcount]["modifiers"] = ["BIG_ENDIAN" => $modifier["BIG_ENDIAN"], "SIZE" => $modifier["SIZE"][$currentformatchar], "TYPE" => $modifier["TYPE"][$currentformatchar] ];
-				if($unpack) {
-					if($arraycount[$datarraycount] != $result[$formatcharcount]["count"] * $result[$formatcharcount]["modifiers"]["SIZE"]) {
-						throw new StructException("Length for format string " . $result[$formatcharcount]["format"] . " at offset ".$offset." (".$result[$formatcharcount]["count"] * $result[$formatcharcount]["modifiers"]["SIZE"].") isn't equal to the length of associated parameter (".$arraycount[$datarraycount].").");
-					}
-					$result[$formatcharcount]["datakey"] = $datarraycount;
-					$datarraycount++;
+				if($currentformatchar == "s") {
+					$loopcount = 1;
 				} else {
-					if($currentformatchar != "x") {
+					$loopcount = $count;
+					$count = 1;
+				}
+				for($x = 0; $x < $loopcount; $x++){
+					$result[$formatcharcount]["format"] = $currentformatchar; // Set format
+					$result[$formatcharcount]["phpformat"] = $modifier["FORMATS"][$currentformatchar]; // Set format
+					$result[$formatcharcount]["count"] = $count;
+					$result[$formatcharcount]["modifiers"] = ["BIG_ENDIAN" => $modifier["BIG_ENDIAN"], "SIZE" => $modifier["SIZE"][$currentformatchar], "TYPE" => $modifier["TYPE"][$currentformatchar] ];
+					if($unpack) {
+						if($arraycount[$datarraycount] != $result[$formatcharcount]["count"] * $result[$formatcharcount]["modifiers"]["SIZE"]) {
+							throw new StructException("Length for format string " . $result[$formatcharcount]["format"] . " at offset ".$offset." (".$result[$formatcharcount]["count"] * $result[$formatcharcount]["modifiers"]["SIZE"].") isn't equal to the length of associated parameter (".$arraycount[$datarraycount].").");
+						}
 						$result[$formatcharcount]["datakey"] = $datarraycount;
 						$datarraycount++;
+					} else {
+						if($currentformatchar != "x") {
+							$result[$formatcharcount]["datakey"] = $datarraycount;
+							$datarraycount++;
+						}
 					}
+					if($datarraycount > count($arraycount)) {
+						throw new StructException("Format string too long or not enough parameters at offset ".$offset." (".$currentformatchar.").");
+					}
+					$formatcharcount++; // Increase element count
 				}
-				if($datarraycount > count($arraycount)) {
-					throw new StructException("Format string too long or not enough parameters at offset ".$offset." (".$currentformatchar.").");
-				}
-				$formatcharcount++; // Increase element count
+				$count = null;
 			} else throw new StructException("Unkown format or modifier supplied at offset ".$offset." (".$currentformatchar.").");
 		}
 		return $result;	
@@ -370,24 +380,34 @@ class Struct {
 		$dataarray = [];
 		$dataarraykey = 0;
 		$datakey = 0;
+		$count = null;
+		$loopcount = 0;
+
 		$modifier = $this->MODIFIERS["@"];
 		foreach (str_split($format) as $offset => $currentformatchar) {
-			if(!isset($multiply)) $multiply = null;
 			if(isset($this->MODIFIERS[$currentformatchar])) {
 				$modifier = $this->MODIFIERS[$currentformatchar]; // Set the modifiers for the current format char
 			} else if(is_numeric($currentformatchar) && ((int)$currentformatchar > 0 || (int)$currentformatchar <= 9)) {
-				$multiply .= $currentformatchar; // Set the count for the current format char
+				$count .= $currentformatchar; // Set the count for the current format char
 			} else if(isset($modifier["SIZE"][$currentformatchar])) {
-				if(!isset($multiply) || $multiply == null) {
-					$multiply = 1; // Set count to 1 if something's wrong.
+				if(!isset($count) || $count == null) {
+					$count = 1; // Set count to 1 if something's wrong.
 				}
-				for ($x = 0;$x < $multiply * $modifier["SIZE"][$currentformatchar];$x++){
-					if(!isset($dataarray[$dataarraykey])) $dataarray[$dataarraykey] = null;
-					$dataarray[$dataarraykey] .= $data[$datakey];
-					$datakey++;
+				if($currentformatchar == "s") {
+					$loopcount = 1;
+				} else {
+					$loopcount = $count;
+					$count = 1;
 				}
-				$dataarraykey++;
-				unset($multiply);
+				for($x = 0; $x < $loopcount; $x++){
+					for ($x = 0;$x < $count * $modifier["SIZE"][$currentformatchar];$x++){
+						if(!isset($dataarray[$dataarraykey])) $dataarray[$dataarraykey] = null;
+						$dataarray[$dataarraykey] .= $data[$datakey];
+						$datakey++;
+					}
+					$dataarraykey++;
+				}
+				$count = null;
 			} else throw new StructException("Unkown format or modifier supplied (".$currentformatchar." at offset ".$offset.").");
 		}
 		return $dataarray;
