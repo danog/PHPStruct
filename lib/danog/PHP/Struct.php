@@ -191,7 +191,7 @@ class Struct {
 						break;
 					case 'p':
 						$tempstring = pack("a" . ($command["count"]-1), $data[$command["datakey"]]);
-						$curresult = pack("v", strlen($tempstring))[0] . $tempstring;
+						$curresult = pack("v", ($command["count"]-1 > 255) ? 255 : $command["count"]-1)[0] . $tempstring;
 						break;
 					default:
 						$curresult = pack($command["phpformat"].$command["count"], $data[$command["datakey"]]); // Pack current char
@@ -255,7 +255,8 @@ class Struct {
 			try {
 				switch ($command["format"]){
 					case 'p':
-						$result[$arraycount] = join('', unpack("a".($command["count"]-1), substr($dataarray[$command["datakey"]], 1)));
+						$templength = unpack("s", $dataarray[$command["datakey"]][0] . pack("x"))[1];
+						$result[$arraycount] = join('', unpack("a".$templength, substr($dataarray[$command["datakey"]], 1)));
 						break;
 					case '?':
 						if (join('', unpack($command["phpformat"].$command["count"], $dataarray[$command["datakey"]])) == 0) $result[$arraycount] = false; else $result[$arraycount] = true;
@@ -264,7 +265,6 @@ class Struct {
 						$result[$arraycount] = join('', unpack($command["phpformat"].$command["count"], $dataarray[$command["datakey"]])); // Unpack current char
 						break;
 				}
-				
 			} catch(StructException $e) {
 				throw new StructException("An error occurred while unpacking data at offset " . $key . " (" . $e->getMessage() . ").");
 			}

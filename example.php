@@ -7,7 +7,7 @@ require('lib/danog/PHP/Struct.php');
 var_dump(\danog\PHP\Struct::unpack("2cxbxBx?xhxHxixIxlxLxqxQxnxNxfxdx2sx5pP", 
 	   \danog\PHP\Struct::pack("2cxbxBx?xhxHxixIxlxLxqxQxnxNxfxdx2sx5pP", 
 "n", "v", 100, 100, false, 333, 444, 232423, 234342, 234234234234, 234234234234, 234234234234, 234234234234, 34434, 344434, 2.2343, 
-3.03424, "df", "asdf", 1283912
+3.03424, "df", "asdfghjkl", 1283912
 
 )
 ));
