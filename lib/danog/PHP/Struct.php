@@ -6,8 +6,8 @@ namespace danog\PHP;
  * PHPStruct
  * PHP implementation of Python's struct module.
  * This library was created to help me develop a [client for the mtproto protocol](https://github.com/danog/MadelineProto).  
- * The functions and the formats are exactly the ones used in python's struct (https://docs.python.org/2/library/struct.html)
- * For now custom byte size is not fully supported, as well as p and P formats.
+ * The functions and the formats are exactly the ones used in python's struct (https://docs.python.org/3/library/struct.html)
+ * For now custom byte size may not work properly on certain machines for the i, I, f and d formats.
  *
  * @package		phpstruct
  * @author		Daniil Gentili <daniil@daniil.it>
@@ -48,7 +48,7 @@ class Struct {
 		];
 		$this->NATIVE_FORMATS = array_merge([
 			// These formats need to be modified after/before encoding/decoding.
-			"P" => "P", // integer or long integer, depending on the size needed to hold a pointer when it has been cast to an integer type. A NULL pointer will always be returned as the Python integer 0. When packing pointer-sized values, Python integer or long integer objects may be used. For example, the Alpha and Merced processors use 64-bit pointer values, meaning a Python long integer will be used to hold the pointer; other platforms use 32-bit pointers and will use a Python integer.
+			"P" => $this->IS64BIT ? "Q" : "L", // integer or long integer, depending on the size needed to hold a pointer when it has been cast to an integer type. A NULL pointer will always be returned as the Python integer 0. When packing pointer-sized values, Python integer or long integer objects may be used. For example, the Alpha and Merced processors use 64-bit pointer values, meaning a Python long integer will be used to hold the pointer; other platforms use 32-bit pointers and will use a Python integer.
 			"n" => "i",
 			"N" => "I",
 		], $this->FORMATS);
@@ -71,7 +71,7 @@ class Struct {
 		];
 		$this->NATIVE_SIZE = [
 			"p" => 1, 
-			"P" => 8, 
+			"P" => strlen(pack($this->NATIVE_FORMATS["P"], 2323)), 
 			"i" => strlen(pack($this->NATIVE_FORMATS["i"], 1)), 
 			"I" => strlen(pack($this->NATIVE_FORMATS["I"], 1)), 
 			"f" => strlen(pack($this->NATIVE_FORMATS["f"], 2.0)), 
@@ -185,9 +185,19 @@ class Struct {
 					default:
 						break;
 				}
-				if(isset($command["datakey"])) {
-					$curresult = pack($command["phpformat"].$command["count"], $data[$command["datakey"]]); // Pack current char
-				} else $curresult = pack($command["phpformat"].$command["count"]); // Pack current char
+				switch ($command["format"]){
+					case 'x':
+						$curresult = pack($command["phpformat"].$command["count"]); // Pack current char
+						break;
+					case 'p':
+						$tempstring = pack("a" . ($command["count"]-1), $data[$command["datakey"]]);
+						$curresult = pack("v", strlen($tempstring))[0] . $tempstring;
+						break;
+					default:
+						$curresult = pack($command["phpformat"].$command["count"], $data[$command["datakey"]]); // Pack current char
+						break;
+				}
+
 			} catch(StructException $e) {
 				throw new StructException("An error occurred while packing data at offset " . $key . " (" . $e->getMessage() . ").");
 			}
@@ -229,9 +239,13 @@ class Struct {
 			return $struct->unpack($format, $data);
 		}
 		if(strlen($data) != $this->calcsize($format)) {
-			throw new StructException("Length of given data is different from length calculated using format string.");
+			throw new StructException("Length of given data (".strlen($data).") is different from length calculated using format string (".$this->calcsize($format).").");
 		}
 		$dataarray = $this->data2array($format, $data);
+
+		if($this->array_total_strlen($dataarray) != $this->calcsize($format)) {
+			throw new StructException("Length of given data array (".$this->array_total_strlen($dataarray).") is different from length calculated using format string (".$this->calcsize($format).").");
+		}
 		$result = []; // Data to return
 		$packcommand = $this->parseformat($format, $this->array_each_strlen($dataarray), true); // Get unpack parameters
 		set_error_handler([$this, 'ExceptionErrorHandler']);
@@ -239,16 +253,20 @@ class Struct {
 		foreach ($packcommand as $key => $command) {
 			if(isset($command["modifiers"]["BIG_ENDIAN"]) && ((!$this->BIG_ENDIAN && $command["modifiers"]["BIG_ENDIAN"]) || ($this->BIG_ENDIAN && !$command["modifiers"]["BIG_ENDIAN"]))) $dataarray[$command["datakey"]] = strrev($dataarray[$command["datakey"]]); // Reverse if wrong endianness
 			try {
-				$result[$arraycount] = join('', unpack($command["phpformat"].$command["count"], $dataarray[$command["datakey"]])); // Unpack current char
+				switch ($command["format"]){
+					case 'p':
+						$result[$arraycount] = join('', unpack("a".($command["count"]-1), substr($dataarray[$command["datakey"]], 1)));
+						break;
+					case '?':
+						if (join('', unpack($command["phpformat"].$command["count"], $dataarray[$command["datakey"]])) == 0) $result[$arraycount] = false; else $result[$arraycount] = true;
+						break;
+					default:
+						$result[$arraycount] = join('', unpack($command["phpformat"].$command["count"], $dataarray[$command["datakey"]])); // Unpack current char
+						break;
+				}
+				
 			} catch(StructException $e) {
 				throw new StructException("An error occurred while unpacking data at offset " . $key . " (" . $e->getMessage() . ").");
-			}
-			switch ($command["format"]) {
-				case '?':
-					if ($result[$arraycount] == 0) $result[$arraycount] = false; else $result[$arraycount] = true;
-					break;
-				default:
-					break;
 			}
 			switch ($command["modifiers"]["TYPE"]){
 				case 'int':
@@ -342,7 +360,8 @@ class Struct {
 				if(!isset($count) || $count == null) {
 					$count = 1; // Set count to 1 by default.
 				}
-				if($currentformatchar == "s") {
+				$count = (int)$count;
+				if($currentformatchar == "s" || $currentformatchar == "p") {
 					$loopcount = 1;
 				} else {
 					$loopcount = $count;
@@ -393,14 +412,16 @@ class Struct {
 				if(!isset($count) || $count == null) {
 					$count = 1; // Set count to 1 if something's wrong.
 				}
-				if($currentformatchar == "s") {
+				$count = (int)$count;
+
+				if($currentformatchar == "s" || $currentformatchar == "p") {
 					$loopcount = 1;
 				} else {
 					$loopcount = $count;
 					$count = 1;
 				}
 				for($x = 0; $x < $loopcount; $x++){
-					for ($x = 0;$x < $count * $modifier["SIZE"][$currentformatchar];$x++){
+					for ($a = 0;$a < $count * $modifier["SIZE"][$currentformatchar];$a++){
 						if(!isset($dataarray[$dataarraykey])) $dataarray[$dataarraykey] = null;
 						$dataarray[$dataarraykey] .= $data[$datakey];
 						$datakey++;
