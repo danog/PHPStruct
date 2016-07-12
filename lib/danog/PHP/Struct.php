@@ -201,7 +201,7 @@ class Struct {
 			} catch(StructException $e) {
 				throw new StructException("An error occurred while packing data at offset " . $key . " (" . $e->getMessage() . ").");
 			}
-			if(((!$this->BIG_ENDIAN && $command["modifiers"]["BIG_ENDIAN"]) || ($this->BIG_ENDIAN && !$command["modifiers"]["BIG_ENDIAN"]))) $curresult = strrev($curresult); // Reverse if wrong endianness
+			if($this->BIG_ENDIAN != $command["modifiers"]["BIG_ENDIAN"] && !in_array($command["format"], array("x", "c", "b", "B", "?", "s", "p"))) $curresult = strrev($curresult); // Reverse if wrong endianness
 			if(strlen($curresult) > $command["modifiers"]["SIZE"] * $command["count"]) {
 				if($command["modifiers"]["BIG_ENDIAN"]) {
 					$curresult = strrev($curresult);
@@ -210,7 +210,7 @@ class Struct {
 				foreach ($remains as $rem) {
 					if($rem != "") throw new StructException("Error while trimming result at offset " . $key . " (format char " . $command["format"] . "): data to trim isn't empty.");
 				}
-				$curresult = join('', array_slice(str_split($curresult), 0, $command["modifiers"]["SIZE"]));
+				$curresult = join('', substr($curresult, 0, $command["modifiers"]["SIZE"]));
 				if($command["modifiers"]["BIG_ENDIAN"]) {
 					$curresult = strrev($curresult);
 				};
@@ -251,7 +251,7 @@ class Struct {
 		set_error_handler([$this, 'ExceptionErrorHandler']);
 		$arraycount = 0;
 		foreach ($packcommand as $key => $command) {
-			if(isset($command["modifiers"]["BIG_ENDIAN"]) && ((!$this->BIG_ENDIAN && $command["modifiers"]["BIG_ENDIAN"]) || ($this->BIG_ENDIAN && !$command["modifiers"]["BIG_ENDIAN"]))) $dataarray[$command["datakey"]] = strrev($dataarray[$command["datakey"]]); // Reverse if wrong endianness
+			if(isset($command["modifiers"]["BIG_ENDIAN"]) && $this->BIG_ENDIAN != $command["modifiers"]["BIG_ENDIAN"] && !in_array($command["format"], array("x", "c", "b", "B", "?", "s", "p"))) $dataarray[$command["datakey"]] = strrev($dataarray[$command["datakey"]]); // Reverse if wrong endianness
 			try {
 				switch ($command["format"]){
 					case 'p':
@@ -421,8 +421,8 @@ class Struct {
 					$count = 1;
 				}
 				for($x = 0; $x < $loopcount; $x++){
+					if(!isset($dataarray[$dataarraykey])) $dataarray[$dataarraykey] = null;
 					for ($a = 0;$a < $count * $modifier["SIZE"][$currentformatchar];$a++){
-						if(!isset($dataarray[$dataarraykey])) $dataarray[$dataarraykey] = null;
 						$dataarray[$dataarraykey] .= $data[$datakey];
 						$datakey++;
 					}
