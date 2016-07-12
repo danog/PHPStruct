@@ -4,5 +4,7 @@ php:
   - hhvm
   - nightly
 
+before_script:
+  - composer update
 script:
   - phpunit --bootstrap lib/danog/PHP/Struct.php tests/danog/PHP/StructTest.php --verbose
