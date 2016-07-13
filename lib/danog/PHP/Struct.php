@@ -180,7 +180,7 @@ class Struct {
 						if(!is_string($data[$command["datakey"]])) throw new StructException("Required argument is not a string.");
 						break;
 					case 'bool':
-						if(!is_bool($data[$command["datakey"]])) throw new StructException("Required argument is not a bool.");
+						//if(!is_bool($data[$command["datakey"]])) throw new StructException("Required argument is not a bool."); // Ignore boolean type
 						break;
 					default:
 						break;
@@ -192,6 +192,9 @@ class Struct {
 					case 'p':
 						$tempstring = pack("a" . ($command["count"]-1), $data[$command["datakey"]]);
 						$curresult = pack("v", ($command["count"]-1 > 255) ? 255 : $command["count"]-1)[0] . $tempstring;
+						break;
+					case '?':
+						$curresult = pack($command["phpformat"], (bool)$data[$command["datakey"]]);
 						break;
 					default:
 						$curresult = pack($command["phpformat"].$command["count"], $data[$command["datakey"]]); // Pack current char
@@ -443,7 +446,7 @@ class Struct {
 	**/
 	public function array_each_strlen($array) {
 		foreach ($array as &$value) {
-			$value = strlen($value);
+			$value = $this->count($value);
 		}
 		return $array;
 	}
@@ -458,9 +461,23 @@ class Struct {
 	public function array_total_strlen($array) {
 		$count = 0;
 		foreach ($array as $value) {
-			$count += strlen($value);
+			$count += $this->count($value);
 		}
 		return $count;
+	}
+	/**
+	 * count
+	 *
+	 * Get the length of a string or of an array
+	 *
+	 * @param	$input		String or array to parse
+	 * @return 	Integer with the length
+	**/
+	public function count($input){
+		if(is_array($input)){
+			return count($input);
+		}
+		return strlen($input);
 	}
 }
 
