@@ -1,6 +1,7 @@
 # PHPStruct class
 
 [![Build Status](https://travis-ci.org/danog/PHPStruct.svg?branch=master)](https://travis-ci.org/danog/PHPStruct)
+[![StyleCI](https://styleci.io/repos/62454134/shield)](https://styleci.io/repos/62454134)
 
 Licensed under MIT.
 
