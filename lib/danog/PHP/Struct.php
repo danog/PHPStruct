@@ -49,8 +49,8 @@ class Struct {
 		$this->NATIVE_FORMATS = array_merge([
 			// These formats need to be modified after/before encoding/decoding.
 			"P" => $this->IS64BIT ? "Q" : "L", // integer or long integer, depending on the size needed to hold a pointer when it has been cast to an integer type. A NULL pointer will always be returned as the Python integer 0. When packing pointer-sized values, Python integer or long integer objects may be used. For example, the Alpha and Merced processors use 64-bit pointer values, meaning a Python long integer will be used to hold the pointer; other platforms use 32-bit pointers and will use a Python integer.
-			"n" => "i",
-			"N" => "I",
+			"n" => $this->IS64BIT ? "q" : "l",
+			"N" => $this->IS64BIT ? "Q" : "L",
 		], $this->FORMATS);
 		$this->SIZE = [
 			"p" => 1, 
