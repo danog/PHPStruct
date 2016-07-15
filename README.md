@@ -1,6 +1,10 @@
 # PHPStruct class
 
 [![Build Status](https://travis-ci.org/danog/PHPStruct.svg?branch=master)](https://travis-ci.org/danog/PHPStruct)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/7b91e30ec89a4313bdb34766ea990113)](https://www.codacy.com/app/daniil-gentili-dg/PHPStruct?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=danog/PHPStruct&amp;utm_campaign=Badge_Grade)
+[![Packagist](https://img.shields.io/packagist/l/danog/phpstruct.svg?maxAge=2592000)](https://packagist.org/danog/phpstruct)
+[![Packagist](https://img.shields.io/packagist/dm/danog/phpstruct.svg?maxAge=2592000)](https://packsgist.org/danog/phpstrucr)
+[![HHVM](https://img.shields.io/hhvm/danog/phpstruct.svg?maxAge=2592000)]()
 
 Licensed under MIT.
 

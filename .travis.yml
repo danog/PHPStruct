@@ -5,6 +5,6 @@ php:
   - nightly
 
 before_script:
-  - composer update
+  - composer update --dev
 script:
   - vendor/phpunit/phpunit/phpunit --bootstrap lib/danog/PHP/Struct.php tests/danog/PHP/StructTest.php --verbose
