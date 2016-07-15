@@ -5,6 +5,7 @@
 [![Packagist](https://img.shields.io/packagist/l/danog/phpstruct.svg?maxAge=2592000)](https://packagist.org/danog/phpstruct)
 [![Packagist](https://img.shields.io/packagist/dm/danog/phpstruct.svg?maxAge=2592000)](https://packsgist.org/danog/phpstrucr)
 [![HHVM](https://img.shields.io/hhvm/danog/phpstruct.svg?maxAge=2592000)]()
+[![StyleCI](https://styleci.io/repos/62454134/shield)](https://styleci.io/repos/62454134)
 
 Licensed under MIT.
 
