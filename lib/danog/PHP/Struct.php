@@ -188,7 +188,7 @@ class Struct
                         }
                         break;
                     case 'bool':
-                        //if(!is_bool($data[$command["datakey"]])) throw new StructException("Required argument is not a bool."); // Ignore boolean type
+                        $data[$command['datakey']] = (bool) $data[$command['datakey']];
                         break;
                     default:
                         break;
@@ -200,9 +200,6 @@ class Struct
                     case 'p':
                         $tempstring = pack('a'.($command['count'] - 1), $data[$command['datakey']]);
                         $curresult = pack('v', ($command['count'] - 1 > 255) ? 255 : $command['count'] - 1)[0].$tempstring;
-                        break;
-                    case '?':
-                        $curresult = pack($command['phpformat'], (bool) $data[$command['datakey']]);
                         break;
                     default:
                         $curresult = pack($command['phpformat'].$command['count'], $data[$command['datakey']]); // Pack current char
