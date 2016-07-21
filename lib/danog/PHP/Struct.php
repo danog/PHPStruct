@@ -45,6 +45,8 @@ class Struct
             'l' => 'l',
             'L' => 'L',
             's' => 'a',
+            'q' => 'q',
+            'Q' => 'Q'
         ];
         $this->NATIVE_FORMATS = array_merge([
             // These formats need to be modified after/before encoding/decoding.
@@ -68,6 +70,8 @@ class Struct
             'l' => 4,
             'L' => 4,
             's' => 1,
+            'q' => 8,
+            'Q' => 8
         ];
         $this->NATIVE_SIZE = [
             'p' => 1,
@@ -88,6 +92,8 @@ class Struct
             's' => strlen(pack($this->NATIVE_FORMATS['s'], 'c')),
             'n' => strlen(pack($this->NATIVE_FORMATS['n'], 1)),
             'N' => strlen(pack($this->NATIVE_FORMATS['N'], 1)),
+            'q' => 8,
+            'Q' => 8
         ];
         $this->TYPE = [
             'p' => 'string',
@@ -105,6 +111,8 @@ class Struct
             'l' => 'int',
             'L' => 'int',
             's' => 'string',
+            'q' => 'int',
+            'Q' => 'int'
         ];
         $this->NATIVE_TYPE = array_merge([
             'P' => 'int', // integer or long integer, depending on the size needed to hold a pointer when it has been cast to an integer type. A NULL pointer will always be returned as the Python integer 0. When packing pointer-sized values, Python integer or long integer objects may be used. For example, the Alpha and Merced processors use 64-bit pointer values, meaning a Python long integer will be used to hold the pointer; other platforms use 32-bit pointers and will use a Python integer.
@@ -112,18 +120,8 @@ class Struct
             'N' => 'int',
         ], $this->TYPE);
         if ($this->IS64BIT) {
-            $this->FORMATS['q'] = 'q';
-            $this->FORMATS['Q'] = 'Q';
-            $this->NATIVE_FORMATS['q'] = 'q';
-            $this->NATIVE_FORMATS['Q'] = 'Q';
-            $this->SIZE['q'] = 8;
-            $this->SIZE['Q'] = 8;
             $this->NATIVE_SIZE['q'] = strlen(pack($this->NATIVE_FORMATS['q'], -70000000));
             $this->NATIVE_SIZE['Q'] = strlen(pack($this->NATIVE_FORMATS['Q'], 70000000));
-            $this->TYPE['q'] = 'int';
-            $this->TYPE['Q'] = 'int';
-            $this->NATIVE_TYPE['q'] = 'int';
-            $this->NATIVE_TYPE['Q'] = 'int';
         }
         $this->MODIFIERS = [
             '<' => ['BIG_ENDIAN' => false, 'SIZE' => $this->SIZE, 'FORMATS' => $this->FORMATS, 'TYPE' => $this->TYPE],
@@ -172,7 +170,7 @@ class Struct
             try {
                 switch ($command['modifiers']['TYPE']) {
                     case 'int':
-                        if (!is_int($data[$command['datakey']])) {
+                        if (!is_int($data[$command['datakey']]) && !is_float($data[$command['datakey']])) {
                             throw new StructException('Required argument is not an integer.');
                         }
                         break;
@@ -200,6 +198,10 @@ class Struct
                     case 'p':
                         $tempstring = pack('a'.($command['count'] - 1), $data[$command['datakey']]);
                         $curresult = pack('v', ($command['count'] - 1 > 255) ? 255 : $command['count'] - 1)[0].$tempstring;
+                        break;
+                    case 'q':
+                    case 'Q':
+                        $curresult = $this->IS64BIT ? pack($command['phpformat'].$command['count'], $data[$command['datakey']]) : $this->manual_q_pack($data[$command['datakey']]);
                         break;
                     default:
                         $curresult = pack($command['phpformat'].$command['count'], $data[$command['datakey']]); // Pack current char
@@ -281,6 +283,10 @@ class Struct
                         } else {
                             $result[$arraycount] = true;
                         }
+                        break;
+                    case 'q':
+                    case 'Q':
+                        $result[$arraycount] = $this->IS64BIT ? implode('', unpack($command['phpformat'].$command['count'], $dataarray[$command['datakey']])) : $this->manual_q_unpack($command['count'], $dataarray[$command['datakey']]);
                         break;
                     default:
                         $result[$arraycount] = implode('', unpack($command['phpformat'].$command['count'], $dataarray[$command['datakey']])); // Unpack current char
@@ -507,7 +513,97 @@ class Struct
 
         return $count;
     }
-
+    /**
+     * manual_q_pack.
+     *
+     * Convert a long integer to a byte string.
+     * If optional blocksize is given and greater than zero, pad the front of the
+     * byte string with binary zeros so that the length is a multiple of
+     * blocksize.
+     *
+     * @param	$s		    Number to pack
+     * @param	$blocksize	Block size
+     *
+     * @return Byte string
+     **/
+    public function manual_q_pack($n, $blocksize = 0)
+    {
+        $s = null;
+        $n = (float)$n;
+        while ($n > 0) {
+            $s = $this->pack('I', $n & 4294967295).$s;
+            $n = $n >> 32;
+        }
+        $break = false;
+        foreach ($this->range(strlen($s)) as $i) {
+            if ($s[$i] != pack("@1")[0]) {
+                $break = true;
+                break;
+            }
+        }
+        if(!$break) {
+            $s = pack("@1");
+            $i = 0;
+        }
+        $s = substr($s, $i);
+        if ($blocksize > 0 && strlen($s) % $blocksize) {
+            $s = pack('@'.$blocksize - (strlen($s) % $blocksize)).$s;
+        }
+        return $s;
+    }
+    /**
+     * manual_q_unpack.
+     *
+     * Convert a byte string to a long integer.
+     * This is (essentially) the inverse of long_to_bytes().
+     *
+     * @param	$s		    Data to unpack
+     *
+     * @return Foat or int with the unpack value
+     **/
+    public function manual_q_unpack($n)
+    {
+        $acc = 0;
+        $length = strlen($s);
+        if ($length % 4) {
+            $extra = (4 - ($length % 4));
+            $s = pack('@'.$extra).$s;
+            $length += $extra;
+        }
+        foreach ($this->range(0, $length, 4) as $i) {
+            $acc = ($acc << 32) + $this->unpack('>I', substr($s, $i, 4))[0];
+        }
+        return $acc;
+    }
+    /**
+     * range.
+     *
+     * Generate range
+     *
+     * @param	$start		Beginning of the range (or stop if no other params are specified)
+     * @param	$stop		End of the range
+     * @param	$step		Step to use in range
+     * @return array with the range
+     **/
+    function range($start, $stop = null, $step = 1)
+    {
+        if ($stop === null) {
+            $stop = $start;
+            $start = 0;
+        }
+        if ($stop <= $start && $step < 0) {
+            $arr = range($stop, $start, -$step);
+            array_pop($arr);
+            return array_reverse($arr, false);
+        }
+        if($step > 1 && $step > ($stop - $start)) {
+            $arr = [ $start ];
+        } else {
+            $arr = range($start, $stop, $step);
+            array_pop($arr);
+        }
+        return $arr;
+    }
     /**
      * count.
      *
