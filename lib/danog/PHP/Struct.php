@@ -531,7 +531,7 @@ class Struct
         $s = null;
         $n = (float)$n;
         while ($n > 0) {
-            $s = $this->pack('I', $n & 4294967295).$s;
+            $s = $this->pack('>I', $n & 4294967295).$s;
             $n = $n >> 32;
         }
         $break = false;
