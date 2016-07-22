@@ -131,6 +131,8 @@ class Struct
             'L' => $this->BIG_ENDIAN,
             'n' => $this->BIG_ENDIAN,
             'N' => $this->BIG_ENDIAN,
+            'q' => true,
+            'Q' => true
         ];
         if ($this->IS64BIT) {
             $this->NATIVE_SIZE['q'] = strlen(pack($this->NATIVE_FORMATS['q'], -70000000));
