@@ -119,16 +119,65 @@ class Struct
             'n' => 'int',
             'N' => 'int',
         ], $this->TYPE);
+        $this->ENDIANNESS_TABLE = [
+            'P' => $this->BIG_ENDIAN,
+            'i' => $this->BIG_ENDIAN,
+            'I' => $this->BIG_ENDIAN,
+            'f' => $this->BIG_ENDIAN,
+            'd' => $this->BIG_ENDIAN,
+            'h' => $this->BIG_ENDIAN,
+            'H' => $this->BIG_ENDIAN,
+            'l' => $this->BIG_ENDIAN,
+            'L' => $this->BIG_ENDIAN,
+            'n' => $this->BIG_ENDIAN,
+            'N' => $this->BIG_ENDIAN,
+        ];
         if ($this->IS64BIT) {
             $this->NATIVE_SIZE['q'] = strlen(pack($this->NATIVE_FORMATS['q'], -70000000));
             $this->NATIVE_SIZE['Q'] = strlen(pack($this->NATIVE_FORMATS['Q'], 70000000));
+            $this->ENDIANNESS_TABLE["q"] = $this->BIG_ENDIAN;
+            $this->ENDIANNESS_TABLE["Q"] = $this->BIG_ENDIAN;
         }
+        $this->LITTLE_ENDIAN_TABLE = array_merge($this->ENDIANNESS_TABLE, array_fill_keys(['x', 'c', 'b', 'B', '?', 's', 'p'], false));
+        $this->BIG_ENDIAN_TABLE = array_merge($this->ENDIANNESS_TABLE, array_fill_keys(['x', 'c', 'b', 'B', '?', 's', 'p'], true));
+        $this->NATIVE_ENDIAN_TABLE = $this->BIG_ENDIAN ? $this->BIG_ENDIAN_TABLE : $this->LITTLE_ENDIAN_TABLE;
+
         $this->MODIFIERS = [
-            '<' => ['BIG_ENDIAN' => false, 'SIZE' => $this->SIZE, 'FORMATS' => $this->FORMATS, 'TYPE' => $this->TYPE],
-            '>' => ['BIG_ENDIAN' => true, 'SIZE' => $this->SIZE, 'FORMATS' => $this->FORMATS, 'TYPE' => $this->TYPE],
-            '!' => ['BIG_ENDIAN' => true, 'SIZE' => $this->SIZE, 'FORMATS' => $this->FORMATS, 'TYPE' => $this->TYPE],
-            '=' => ['BIG_ENDIAN' => $this->BIG_ENDIAN, 'SIZE' => $this->SIZE, 'FORMATS' => $this->FORMATS, 'TYPE' => $this->TYPE],
-            '@' => ['BIG_ENDIAN' => $this->BIG_ENDIAN, 'SIZE' => $this->NATIVE_SIZE, 'FORMATS' => $this->NATIVE_FORMATS, 'TYPE' => $this->NATIVE_TYPE],
+            '<' => [
+                'BIG_ENDIAN' => false,
+                'ENDIANNESS' => $this->LITTLE_ENDIAN_TABLE,
+                'SIZE' => $this->SIZE,
+                'FORMATS' => $this->FORMATS,
+                'TYPE' => $this->TYPE
+            ],
+            '>' => [
+                'BIG_ENDIAN' => true,
+                'ENDIANNESS' => $this->BIG_ENDIAN_TABLE,
+                'SIZE' => $this->SIZE,
+                'FORMATS' => $this->FORMATS,
+                'TYPE' => $this->TYPE
+            ],
+            '!' => [
+                'BIG_ENDIAN' => true,
+                'ENDIANNESS' => $this->BIG_ENDIAN_TABLE,
+                'SIZE' => $this->SIZE,
+                'FORMATS' => $this->FORMATS,
+                'TYPE' => $this->TYPE
+            ],
+            '=' => [
+                'BIG_ENDIAN' => $this->BIG_ENDIAN,
+                'ENDIANNESS' => $this->NATIVE_ENDIAN_TABLE,
+                'SIZE' => $this->SIZE,
+                'FORMATS' => $this->FORMATS, 
+                'TYPE' => $this->TYPE
+            ],
+            '@' => [
+                'BIG_ENDIAN' => $this->BIG_ENDIAN, 
+                'ENDIANNESS' => $this->NATIVE_ENDIAN_TABLE,
+                'SIZE' => $this->NATIVE_SIZE, 
+                'FORMATS' => $this->NATIVE_FORMATS, 
+                'TYPE' => $this->NATIVE_TYPE
+            ],
         ];
     }
 
@@ -210,9 +259,13 @@ class Struct
             } catch (StructException $e) {
                 throw new StructException('An error occurred while packing data at offset '.$key.' ('.$e->getMessage().').');
             }
-            if ($this->BIG_ENDIAN != $command['modifiers']['BIG_ENDIAN'] && !in_array($command['format'], ['x', 'c', 'b', 'B', '?', 's', 'p'])) {
+            if ($command['modifiers']['FORMAT_ENDIANNESS'] != $command['modifiers']['BIG_ENDIAN']){
                 $curresult = strrev($curresult);
             } // Reverse if wrong endianness
+            if(strlen($curresult) != $command['modifiers']['SIZE'] * $command['count']) {
+                throw new StructException("Size of packed data from format char " . $command['format'] . " at offset " . $offset . " (".strlen($curresult).") isn't equal to expected size (".$command['modifiers']['SIZE'] * $command['count'].").");
+            }
+            /*
             if (strlen($curresult) > $command['modifiers']['SIZE'] * $command['count']) {
                 if ($command['modifiers']['BIG_ENDIAN']) {
                     $curresult = strrev($curresult);
@@ -227,7 +280,7 @@ class Struct
                 if ($command['modifiers']['BIG_ENDIAN']) {
                     $curresult = strrev($curresult);
                 }
-            }
+            }*/
             $result .= $curresult;
         }
         restore_error_handler();
@@ -268,7 +321,7 @@ class Struct
         set_error_handler([$this, 'ExceptionErrorHandler']);
         $arraycount = 0;
         foreach ($packcommand as $key => $command) {
-            if (isset($command['modifiers']['BIG_ENDIAN']) && $this->BIG_ENDIAN != $command['modifiers']['BIG_ENDIAN'] && !in_array($command['format'], ['x', 'c', 'b', 'B', '?', 's', 'p'])) {
+            if ($command['modifiers']['FORMAT_ENDIANNESS'] != $command['modifiers']['BIG_ENDIAN']) {
                 $dataarray[$command['datakey']] = strrev($dataarray[$command['datakey']]);
             } // Reverse if wrong endianness
             try {
@@ -405,7 +458,12 @@ class Struct
                     $result[$formatcharcount]['format'] = $currentformatchar; // Set format
                     $result[$formatcharcount]['phpformat'] = $modifier['FORMATS'][$currentformatchar]; // Set format
                     $result[$formatcharcount]['count'] = $count;
-                    $result[$formatcharcount]['modifiers'] = ['BIG_ENDIAN' => $modifier['BIG_ENDIAN'], 'SIZE' => $modifier['SIZE'][$currentformatchar], 'TYPE' => $modifier['TYPE'][$currentformatchar]];
+                    $result[$formatcharcount]['modifiers'] = [
+                        'BIG_ENDIAN' => $modifier['BIG_ENDIAN'], 
+                        'FORMAT_ENDIANNESS' => $modifier['ENDIANNESS'][$currentformatchar], 
+                        'SIZE' => $modifier['SIZE'][$currentformatchar], 
+                        'TYPE' => $modifier['TYPE'][$currentformatchar]
+                    ];
                     if ($unpack) {
                         if ($arraycount[$datarraycount] != $result[$formatcharcount]['count'] * $result[$formatcharcount]['modifiers']['SIZE']) {
                             throw new StructException('Length for format string '.$result[$formatcharcount]['format'].' at offset '.$offset.' ('.$result[$formatcharcount]['count'] * $result[$formatcharcount]['modifiers']['SIZE'].") isn't equal to the length of associated parameter (".$arraycount[$datarraycount].').');
@@ -526,10 +584,10 @@ class Struct
      *
      * @return Byte string
      **/
-    public function manual_q_pack($n, $blocksize = 0)
+    public function manual_q_pack($n, $blocksize = 8)
     {
         $s = null;
-        $n = (float)$n;
+        $n = (int)$n;
         while ($n > 0) {
             $s = $this->pack('>I', $n & 4294967295).$s;
             $n = $n >> 32;

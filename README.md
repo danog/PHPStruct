@@ -16,6 +16,18 @@ This library was created to help me develop a [client for the mtproto protocol](
 The functions and the formats are exactly the ones used in python's struct 
 (https://docs.python.org/3/library/struct.html)
 
+This library can be used to pack/unpack strings, ints, floats, chars and bools into bytes.
+It has lots of advantages over PHP's native implementation of pack and unpack, such as:  
+* Custom byte endianness.
+* Lots of useful formats that aren't present in the native implementation.
+* The syntax of the format string of pack and unpack is the same as in python's struct module.
+* The result of unpack is normal numerically indexed array that starts from 0 like it should.
+* The result of unpack has type casted values (int for integer formats, bool for boolean formats, float for float formats and string for all of the other formats).
+* Pack is more strict about the type of input formats.
+* The calcsize function is implemented.
+* The q and Q formats can be used even on 32 bit systems.
+
+
 For now custom byte size may not work properly on certain machines for the i, I, f and d formats.
 
 ## Installation
