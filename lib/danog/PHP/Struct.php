@@ -589,7 +589,6 @@ class Struct
     public function manual_q_pack($n, $blocksize = 8)
     {
         $s = null;
-        $n = (int)$n;
         while ($n > 0) {
             $s = $this->pack('>I', $n & 4294967295).$s;
             $n = $n >> 32;
