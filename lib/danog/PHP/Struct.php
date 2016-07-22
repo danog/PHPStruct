@@ -341,7 +341,7 @@ class Struct
                         break;
                     case 'q':
                     case 'Q':
-                        $result[$arraycount] = $this->IS64BIT ? implode('', unpack($command['phpformat'].$command['count'], $dataarray[$command['datakey']])) : $this->manual_q_unpack($command['count'], $dataarray[$command['datakey']]);
+                        $result[$arraycount] = $this->IS64BIT ? implode('', unpack($command['phpformat'].$command['count'], $dataarray[$command['datakey']])) : $this->manual_q_unpack($dataarray[$command['datakey']]);
                         break;
                     default:
                         $result[$arraycount] = implode('', unpack($command['phpformat'].$command['count'], $dataarray[$command['datakey']])); // Unpack current char
