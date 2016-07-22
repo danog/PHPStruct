@@ -607,7 +607,7 @@ class Struct
         }
         $s = substr($s, $i);
         if ($blocksize > 0 && strlen($s) % $blocksize) {
-            $s = pack('@'.$blocksize - (strlen($s) % $blocksize)).$s;
+            $s = pack('@'.($blocksize - (strlen($s) % $blocksize))).$s;
         }
         return $s;
     }
@@ -621,7 +621,7 @@ class Struct
      *
      * @return Foat or int with the unpack value
      **/
-    public function manual_q_unpack($n)
+    public function manual_q_unpack($s)
     {
         $acc = 0;
         $length = strlen($s);
