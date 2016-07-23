@@ -48,12 +48,14 @@ class Struct
             'q' => 'q',
             'Q' => 'Q'
         ];
-        $this->NATIVE_FORMATS = array_merge([
+        $this->NATIVE_FORMATS = array_replace($this->FORMATS, [
             // These formats need to be modified after/before encoding/decoding.
             'P' => $this->IS64BIT ? 'Q' : 'L', // integer or long integer, depending on the size needed to hold a pointer when it has been cast to an integer type. A NULL pointer will always be returned as the Python integer 0. When packing pointer-sized values, Python integer or long integer objects may be used. For example, the Alpha and Merced processors use 64-bit pointer values, meaning a Python long integer will be used to hold the pointer; other platforms use 32-bit pointers and will use a Python integer.
             'n' => $this->IS64BIT ? 'q' : 'l',
             'N' => $this->IS64BIT ? 'Q' : 'L',
-        ], $this->FORMATS);
+            'l' => $this->IS64BIT ? 'q' : 'l',
+            'L' => $this->IS64BIT ? 'Q' : 'L',
+        ]);
         $this->SIZE = [
             'p' => 1,
             'i' => 4,
@@ -87,8 +89,8 @@ class Struct
             'B' => strlen(pack($this->NATIVE_FORMATS['B'], 'c')),
             'h' => strlen(pack($this->NATIVE_FORMATS['h'], -700)),
             'H' => strlen(pack($this->NATIVE_FORMATS['H'], 700)),
-            'l' => strlen(pack($this->NATIVE_FORMATS['l'], -70000000)),
-            'L' => strlen(pack($this->NATIVE_FORMATS['L'], 70000000)),
+            'l' => strlen(pack($this->NATIVE_FORMATS['l'], -700)),
+            'L' => strlen(pack($this->NATIVE_FORMATS['L'], 700)),
             's' => strlen(pack($this->NATIVE_FORMATS['s'], 'c')),
             'n' => strlen(pack($this->NATIVE_FORMATS['n'], 1)),
             'N' => strlen(pack($this->NATIVE_FORMATS['N'], 1)),
@@ -265,7 +267,7 @@ class Struct
                 $curresult = strrev($curresult);
             } // Reverse if wrong endianness
             if(strlen($curresult) != $command['modifiers']['SIZE'] * $command['count']) {
-                throw new StructException("Size of packed data from format char " . $command['format'] . " at offset " . $offset . " (".strlen($curresult).") isn't equal to expected size (".$command['modifiers']['SIZE'] * $command['count'].").");
+                throw new StructException("Size of packed data from format char " . $command['format'] ." (".strlen($curresult).") isn't equal to expected size (".$command['modifiers']['SIZE'] * $command['count'].").");
             }
             /*
             if (strlen($curresult) > $command['modifiers']['SIZE'] * $command['count']) {
@@ -350,25 +352,31 @@ class Struct
             } catch (StructException $e) {
                 throw new StructException('An error occurred while unpacking data at offset '.$key.' ('.$e->getMessage().').');
             }
-            switch ($command['modifiers']['TYPE']) {
-                case 'int':
-                    $result[$arraycount] = (int) $result[$arraycount];
+            switch ($command['modifiers']['TYPE']) {                    case 'int':
+                    if (!is_int($result[$arraycount]) && !is_float($result[$arraycount])) {
+                        $result[$arraycount] = (int)$result[$arraycount];
+                    }
                     break;
                 case 'float':
-                    $result[$arraycount] = (float) $result[$arraycount];
-                    break;
-                case 'string':
-                    $result[$arraycount] = (string) $result[$arraycount];
-                    break;
-                case 'bool':
-                    $result[$arraycount] = (bool) $result[$arraycount];
+                    if (!is_float($data[$command['datakey']])) {
+                        $result[$arraycount] = (float)$result[$arraycount];
+                    }
+
                     break;
                 case 'unset':
                     unset($result[$arraycount]);
                     $arraycount--;
+                case 'string':
+                    if (!is_string($data[$command['datakey']])) {
+                        $result[$arraycount] = (string)$result[$arraycount];
+                    }
+                    break;
+                case 'bool':
+                    if (!is_bool($data[$command['datakey']])) {
+                        $result[$arraycount] = (bool)$result[$arraycount];
+                    }
                     break;
                 default:
-                    $result[$arraycount] = (string) $result[$arraycount];
                     break;
             }
             $arraycount++;
@@ -624,7 +632,7 @@ class Struct
     {
         $acc = 0;
         $length = strlen($s);
-        if ($length % 4) {
+        if ((bool)($length % 4)) {
             $extra = (4 - ($length % 4));
             $s = pack('@'.$extra).$s;
             $length += $extra;
