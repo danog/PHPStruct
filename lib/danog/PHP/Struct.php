@@ -25,28 +25,34 @@ class Struct
         $this->BIG_ENDIAN = (pack('L', 1) === pack('N', 1));
         $this->IS64BIT = (PHP_INT_SIZE === 8);
         $this->FORMATS = [
-            // These formats need to be modified after/before encoding/decoding.
-            'p' => 'p', // “Pascal string”, meaning a short variable-length string stored in a fixed number of bytes, given by the count. The first byte stored is the length of the string, or 255, whichever is smaller. The bytes of the string follow. If the string passed in to pack() is too long (longer than the count minus 1), only the leading count-1 bytes of the string are stored. If the string is shorter than count-1, it is padded with null bytes so that exactly count bytes in all are used. Note that for unpack(), the 'p' format character consumes count bytes, but that the string returned can never contain more than 255 characters.
-
-            // These formats have automatical byte size, this must be fixed.
+            // Integer formats
+            'b' => 'c', // should be 1 (8 bit)
+            'B' => 'C', // should be 1 (8 bit)
+            'h' => 's', // should be 2 (16 bit)
+            'H' => 'S', // should be 2 (16 bit)
             'i' => 'i', // should be 4 (32 bit)
             'I' => 'I', // should be 4 (32 bit)
+            'l' => 'l', // should be 4 (32 bit)
+            'L' => 'L', // should be 4 (32 bit)
+            'q' => 'q', // should be 8 (64 bit)
+            'Q' => 'Q', // should be 8 (64 bit)
+
+            // Floating point numbers
             'f' => 'f', // should be 4 (32 bit)
             'd' => 'd', // should be 8 (64 bit)
 
-            // These formats should work exactly as in python's struct (same byte size, etc).
-            'c' => 'a',
-            '?' => 'c',
-            'x' => 'x',
-            'b' => 'c',
-            'B' => 'C',
-            'h' => 's',
-            'H' => 'S',
-            'l' => 'l',
-            'L' => 'L',
+            // String formats (note that these format chars require a single parameter, regardless of the format char count)
             's' => 'a',
-            'q' => 'q',
-            'Q' => 'Q'
+            'p' => 'p', // “Pascal string”, meaning a short variable-length string stored in a fixed number of bytes, given by the count. The first byte stored is the length of the string, or 255, whichever is smaller. The bytes of the string follow. If the string passed in to pack() is too long (longer than the count minus 1), only the leading count-1 bytes of the string are stored. If the string is shorter than count-1, it is padded with null bytes so that exactly count bytes in all are used. Note that for unpack(), the 'p' format character consumes count bytes, but that the string returned can never contain more than 255 characters.
+
+            // char formats
+            'c' => 'a',
+
+            // Boolean formats
+            '?' => 'c',
+
+            // Null
+            'x' => 'x',
         ];
         $this->NATIVE_FORMATS = array_replace($this->FORMATS, [
             // These formats need to be modified after/before encoding/decoding.
@@ -57,95 +63,129 @@ class Struct
             'L' => $this->IS64BIT ? 'Q' : 'L',
         ]);
         $this->SIZE = [
-            'p' => 1,
-            'i' => 4,
-            'I' => 4,
-            'f' => 4,
-            'd' => 8,
-            'c' => 1,
-            '?' => 1,
-            'x' => 1,
+            // Integer formats
             'b' => 1,
             'B' => 1,
             'h' => 2,
             'H' => 2,
+            'i' => 4,
+            'I' => 4,
             'l' => 4,
             'L' => 4,
-            's' => 1,
             'q' => 8,
-            'Q' => 8
-        ];
-        $this->NATIVE_SIZE = [
+            'Q' => 8,
+
+            // Floating point numbers
+            'f' => 4,
+            'd' => 8,
+
+            // String formats (note that these format chars require a single parameter, regardless of the format char count)
+            's' => 1,
             'p' => 1,
-            'P' => strlen(pack($this->NATIVE_FORMATS['P'], 2323)),
-            'i' => strlen(pack($this->NATIVE_FORMATS['i'], 1)),
-            'I' => strlen(pack($this->NATIVE_FORMATS['I'], 1)),
-            'f' => strlen(pack($this->NATIVE_FORMATS['f'], 2.0)),
-            'd' => strlen(pack($this->NATIVE_FORMATS['d'], 2.0)),
-            'c' => strlen(pack($this->NATIVE_FORMATS['c'], 'a')),
-            '?' => strlen(pack($this->NATIVE_FORMATS['?'], false)),
-            'x' => strlen(pack($this->NATIVE_FORMATS['x'])),
-            'b' => strlen(pack($this->NATIVE_FORMATS['b'], 'c')),
-            'B' => strlen(pack($this->NATIVE_FORMATS['B'], 'c')),
+
+            // char formats
+            'c' => 1,
+
+            // Boolean formats
+            '?' => 1,
+
+            // Null
+            'x' => 1,
+        ];
+        // Native length table for the @ modifier
+        $this->NATIVE_SIZE = [
+            // Integer formats
+            'b' => strlen(pack($this->NATIVE_FORMATS['b'], 11)),
+            'B' => strlen(pack($this->NATIVE_FORMATS['B'], 11)),
             'h' => strlen(pack($this->NATIVE_FORMATS['h'], -700)),
             'H' => strlen(pack($this->NATIVE_FORMATS['H'], 700)),
+            'i' => strlen(pack($this->NATIVE_FORMATS['i'], 1)),
+            'I' => strlen(pack($this->NATIVE_FORMATS['I'], 1)),
             'l' => strlen(pack($this->NATIVE_FORMATS['l'], -700)),
             'L' => strlen(pack($this->NATIVE_FORMATS['L'], 700)),
+            'q' => $this->IS64BIT ? strlen(pack($this->NATIVE_FORMATS['q'], 700)) : 8,
+            'Q' => $this->IS64BIT ? strlen(pack($this->NATIVE_FORMATS['Q'], 700)) : 8,
+            
+            // Floating point formats
+            'f' => strlen(pack($this->NATIVE_FORMATS['f'], 2.0)),
+            'd' => strlen(pack($this->NATIVE_FORMATS['d'], 2.0)),
+
+            // String formats (note that these format chars require a single parameter, regardless of the format char count)
+            'p' => 1,
             's' => strlen(pack($this->NATIVE_FORMATS['s'], 'c')),
+
+            // Char formats
+            'c' => strlen(pack($this->NATIVE_FORMATS['c'], 'a')),
+
+            // Boolean formats
+            '?' => strlen(pack($this->NATIVE_FORMATS['?'], false)),
+
+            // Null
+            'x' => strlen(pack($this->NATIVE_FORMATS['x'])),
+
+            // Automatical length formats
+            'P' => strlen(pack($this->NATIVE_FORMATS['P'], 2323)),
             'n' => strlen(pack($this->NATIVE_FORMATS['n'], 1)),
             'N' => strlen(pack($this->NATIVE_FORMATS['N'], 1)),
-            'q' => 8,
-            'Q' => 8
         ];
         $this->TYPE = [
-            'p' => 'string',
-            'i' => 'int',
-            'I' => 'int',
-            'f' => 'float',
-            'd' => 'float',
-            'c' => 'string',
-            '?' => 'bool',
-            'x' => 'unset',
+            // Integer formats
             'b' => 'int',
             'B' => 'int',
             'h' => 'int',
             'H' => 'int',
+            'i' => 'int',
+            'I' => 'int',
             'l' => 'int',
             'L' => 'int',
-            's' => 'string',
             'q' => 'int',
-            'Q' => 'int'
+            'Q' => 'int',
+
+             // Floating point formats
+            'f' => 'float',
+            'd' => 'float',
+
+            // String formats
+            'p' => 'string',
+            's' => 'string',
+
+            // Char formats
+            'c' => 'string',
+
+            // Boolean formats
+            '?' => 'bool',
+
+            // Null
+            'x' => 'unset',
         ];
         $this->NATIVE_TYPE = array_merge([
-            'P' => 'int', // integer or long integer, depending on the size needed to hold a pointer when it has been cast to an integer type. A NULL pointer will always be returned as the Python integer 0. When packing pointer-sized values, Python integer or long integer objects may be used. For example, the Alpha and Merced processors use 64-bit pointer values, meaning a Python long integer will be used to hold the pointer; other platforms use 32-bit pointers and will use a Python integer.
-            'n' => 'int',
-            'N' => 'int',
+            // These formats need to be modified after/before encoding/decoding.
+            'P' => $this->IS64BIT ? $this->TYPE['Q'] : $this->TYPE['L'], // integer or long integer, depending on the size needed to hold a pointer when it has been cast to an integer type. A NULL pointer will always be returned as the Python integer 0. When packing pointer-sized values, Python integer or long integer objects may be used. For example, the Alpha and Merced processors use 64-bit pointer values, meaning a Python long integer will be used to hold the pointer; other platforms use 32-bit pointers and will use a Python integer.
+            'n' => $this->IS64BIT ? $this->TYPE['q'] : $this->TYPE['l'],
+            'N' => $this->IS64BIT ? $this->TYPE['Q'] : $this->TYPE['L'],
         ], $this->TYPE);
         $this->ENDIANNESS_TABLE = [
-            'P' => $this->BIG_ENDIAN,
-            'i' => $this->BIG_ENDIAN,
-            'I' => $this->BIG_ENDIAN,
+            'h' => true,
+            'H' => true,
+            'i' => true,
+            'I' => true,
+            'l' => true,
+            'L' => true,
+            'q' => true,
+            'Q' => true,
+
+            'n' => true,
+            'N' => true,
+            'P' => true,
+
             'f' => $this->BIG_ENDIAN,
             'd' => $this->BIG_ENDIAN,
-            'h' => $this->BIG_ENDIAN,
-            'H' => $this->BIG_ENDIAN,
-            'l' => $this->BIG_ENDIAN,
-            'L' => $this->BIG_ENDIAN,
-            'n' => $this->BIG_ENDIAN,
-            'N' => $this->BIG_ENDIAN,
-            'q' => true,
-            'Q' => true
+
         ];
-        if ($this->IS64BIT) {
-            $this->NATIVE_SIZE['q'] = strlen(pack($this->NATIVE_FORMATS['q'], -70000000));
-            $this->NATIVE_SIZE['Q'] = strlen(pack($this->NATIVE_FORMATS['Q'], 70000000));
-            $this->ENDIANNESS_TABLE["q"] = $this->BIG_ENDIAN;
-            $this->ENDIANNESS_TABLE["Q"] = $this->BIG_ENDIAN;
-        }
         $this->LITTLE_ENDIAN_TABLE = array_merge($this->ENDIANNESS_TABLE, array_fill_keys(['x', 'c', 'b', 'B', '?', 's', 'p'], false));
         $this->BIG_ENDIAN_TABLE = array_merge($this->ENDIANNESS_TABLE, array_fill_keys(['x', 'c', 'b', 'B', '?', 's', 'p'], true));
         $this->NATIVE_ENDIAN_TABLE = $this->BIG_ENDIAN ? $this->BIG_ENDIAN_TABLE : $this->LITTLE_ENDIAN_TABLE;
-
+        
         $this->MODIFIERS = [
             '<' => [
                 'BIG_ENDIAN' => false,
@@ -223,20 +263,13 @@ class Struct
             try {
                 switch ($command['modifiers']['TYPE']) {
                     case 'int':
-                        if (!is_int($data[$command['datakey']]) && !is_float($data[$command['datakey']])) {
-                            throw new StructException('Required argument is not an integer.');
-                        }
+                        $data[$command['datakey']] = (int) $data[$command['datakey']];
                         break;
                     case 'float':
-                        if (!is_float($data[$command['datakey']])) {
-                            throw new StructException('Required argument is not a float.');
-                        }
-
+                        $data[$command['datakey']] = (float) $data[$command['datakey']];
                         break;
                     case 'string':
-                        if (!is_string($data[$command['datakey']])) {
-                            throw new StructException('Required argument is not a string.');
-                        }
+                        $data[$command['datakey']] = (string) $data[$command['datakey']];
                         break;
                     case 'bool':
                         $data[$command['datakey']] = (bool) $data[$command['datakey']];
@@ -244,17 +277,12 @@ class Struct
                     default:
                         break;
                 }
-                switch ($command['format']) {
+                switch ($command['phpformat']) {
                     case 'x':
                         $curresult = pack($command['phpformat'].$command['count']); // Pack current char
                         break;
                     case 'p':
-                        $tempstring = pack('a'.($command['count'] - 1), $data[$command['datakey']]);
-                        $curresult = pack('v', ($command['count'] - 1 > 255) ? 255 : $command['count'] - 1)[0].$tempstring;
-                        break;
-                    case 'q':
-                    case 'Q':
-                        $curresult = $this->IS64BIT ? pack($command['phpformat'].$command['count'], $data[$command['datakey']]) : $this->manual_q_pack($data[$command['datakey']]);
+                        $curresult = pack('c', ($command['count'] - 1 > 255) ? 255 : $command['count'] - 1).pack('a'.($command['count'] - 1), $data[$command['datakey']]);
                         break;
                     default:
                         $curresult = pack($command['phpformat'].$command['count'], $data[$command['datakey']]); // Pack current char
@@ -329,7 +357,7 @@ class Struct
                 $dataarray[$command['datakey']] = strrev($dataarray[$command['datakey']]);
             } // Reverse if wrong endianness
             try {
-                switch ($command['format']) {
+                switch ($command['phpformat']) {
                     case 'p':
                         $templength = unpack('s', $dataarray[$command['datakey']][0].pack('x'))[1];
                         $result[$arraycount] = implode('', unpack('a'.$templength, substr($dataarray[$command['datakey']], 1)));
@@ -340,10 +368,6 @@ class Struct
                         } else {
                             $result[$arraycount] = true;
                         }
-                        break;
-                    case 'q':
-                    case 'Q':
-                        $result[$arraycount] = $this->IS64BIT ? implode('', unpack($command['phpformat'].$command['count'], $dataarray[$command['datakey']])) : $this->manual_q_unpack($dataarray[$command['datakey']]);
                         break;
                     default:
                         $result[$arraycount] = implode('', unpack($command['phpformat'].$command['count'], $dataarray[$command['datakey']])); // Unpack current char
@@ -582,7 +606,7 @@ class Struct
         return $count;
     }
     /**
-     * manual_q_pack.
+     * num_pack_unsigned.
      *
      * Convert a long integer to a byte string.
      * If optional blocksize is given and greater than zero, pad the front of the
@@ -594,12 +618,12 @@ class Struct
      *
      * @return Byte string
      **/
-    public function manual_q_pack($n, $blocksize = 8)
+    public function num_pack_unsigned($n, $blocksize = 1)
     {
         $s = null;
         while ($n > 0) {
-            $s = $this->pack('>I', $n & 4294967295).$s;
-            $n = $n >> 32;
+            $s = pack('C', $n & 65535).$s;
+            $n = $n >> 16;
         }
         $break = false;
         foreach ($this->range(strlen($s)) as $i) {
@@ -628,7 +652,7 @@ class Struct
      *
      * @return Foat or int with the unpack value
      **/
-    public function manual_q_unpack($s)
+    public function num_unpack($s)
     {
         $acc = 0;
         $length = strlen($s);
