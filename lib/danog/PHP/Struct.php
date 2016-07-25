@@ -49,7 +49,7 @@ class Struct
             'c' => 'a',
 
             // Boolean formats
-            '?' => 'c',
+            '?' => '?',
 
             // Null
             'x' => 'x',
@@ -118,7 +118,7 @@ class Struct
             'c' => strlen(pack($this->NATIVE_FORMATS['c'], 'a')),
 
             // Boolean formats
-            '?' => strlen(pack($this->NATIVE_FORMATS['?'], false)),
+            '?' => strlen(pack('c', false)),
 
             // Null
             'x' => strlen(pack($this->NATIVE_FORMATS['x'])),
@@ -236,7 +236,7 @@ class Struct
         if (error_reporting() === 0) {
             return true; // return true to continue through the others error handlers
         }
-        throw new StructException($errstr, $errno);
+        throw new StructException($errstr . " on line " . $errline, $errno);
     }
 
     /**
@@ -283,6 +283,21 @@ class Struct
                         break;
                     case 'p':
                         $curresult = pack('c', ($command['count'] - 1 > 255) ? 255 : $command['count'] - 1).pack('a'.($command['count'] - 1), $data[$command['datakey']]);
+                        break;
+                    case 'q':
+                    case 'Q':
+                    case 'l':
+                    case 'L':
+                    case 'i':
+                    case 'I':
+                    case 's':
+                    case 'S':
+                    case 'c':
+                    case 'C':
+                        $curresult = $this->num_pack($data[$command['datakey']], $command['modifiers']['SIZE'], ctype_upper($command['phpformat']));
+                        break;
+                    case '?':
+                        $curresult = pack('c'.$command['count'], $data[$command['datakey']]); // Pack current char
                         break;
                     default:
                         $curresult = pack($command['phpformat'].$command['count'], $data[$command['datakey']]); // Pack current char
@@ -359,15 +374,27 @@ class Struct
             try {
                 switch ($command['phpformat']) {
                     case 'p':
-                        $templength = unpack('s', $dataarray[$command['datakey']][0].pack('x'))[1];
+                        $templength = unpack('c', $dataarray[$command['datakey']])[1];
                         $result[$arraycount] = implode('', unpack('a'.$templength, substr($dataarray[$command['datakey']], 1)));
                         break;
                     case '?':
-                        if (implode('', unpack($command['phpformat'].$command['count'], $dataarray[$command['datakey']])) == 0) {
+                        if (implode('', unpack('c'.$command['count'], $dataarray[$command['datakey']])) == 0) {
                             $result[$arraycount] = false;
                         } else {
                             $result[$arraycount] = true;
                         }
+                        break;
+                    case 'q':
+                    case 'Q':
+                    case 'l':
+                    case 'L':
+                    case 'i':
+                    case 'I':
+                    case 's':
+                    case 'S':
+                    case 'c':
+                    case 'C':
+                        $result[$arraycount] = $this->num_unpack($dataarray[$command['datakey']], $command['modifiers']['SIZE'], ctype_upper($command['phpformat']));
                         break;
                     default:
                         $result[$arraycount] = implode('', unpack($command['phpformat'].$command['count'], $dataarray[$command['datakey']])); // Unpack current char
@@ -376,13 +403,14 @@ class Struct
             } catch (StructException $e) {
                 throw new StructException('An error occurred while unpacking data at offset '.$key.' ('.$e->getMessage().').');
             }
-            switch ($command['modifiers']['TYPE']) {                    case 'int':
+            switch ($command['modifiers']['TYPE']) {
+                case 'int':
                     if (!is_int($result[$arraycount]) && !is_float($result[$arraycount])) {
                         $result[$arraycount] = (int)$result[$arraycount];
                     }
                     break;
                 case 'float':
-                    if (!is_float($data[$command['datakey']])) {
+                    if (!is_float($result[$arraycount])) {
                         $result[$arraycount] = (float)$result[$arraycount];
                     }
 
@@ -390,13 +418,14 @@ class Struct
                 case 'unset':
                     unset($result[$arraycount]);
                     $arraycount--;
+                    break;
                 case 'string':
-                    if (!is_string($data[$command['datakey']])) {
+                    if (!is_string($result[$arraycount])) {
                         $result[$arraycount] = (string)$result[$arraycount];
                     }
                     break;
                 case 'bool':
-                    if (!is_bool($data[$command['datakey']])) {
+                    if (!is_bool($result[$arraycount])) {
                         $result[$arraycount] = (bool)$result[$arraycount];
                     }
                     break;
@@ -608,61 +637,82 @@ class Struct
     /**
      * num_pack_unsigned.
      *
-     * Convert a long integer to a byte string.
+     * Convert a number to a byte string.
      * If optional blocksize is given and greater than zero, pad the front of the
-     * byte string with binary zeros so that the length is a multiple of
+     * byte string with binary zeros so that the length is the
      * blocksize.
      *
      * @param	$s		    Number to pack
      * @param	$blocksize	Block size
+     * @param      $unsigned   Boolean that determines whether to work in signed or unsigned mode
      *
      * @return Byte string
      **/
-    public function num_pack_unsigned($n, $blocksize = 1)
+    public function num_pack($n, $blocksize = 1, $unsigned)
     {
+       $bitnumber = $blocksize * 8;
+       if($unsigned) {
+            $max = pow(2, $bitnumber) - 1;
+            $min = 0;
+        } else {
+            $max = pow(2, $bitnumber-1) - 1;
+            $min = -pow(2, $bitnumber-1);
+        }
+        if($n < $min || $n > $max) {
+            trigger_error("Number is not within required range (".$min." <= number <= ".$max.").");
+        }
+        if(!$unsigned && $n < 0) {
+            $n = (-($n) ^ (pow(2, $bitnumber) - 1)) + 1;
+        }
         $s = null;
         while ($n > 0) {
-            $s = pack('C', $n & 65535).$s;
-            $n = $n >> 16;
+            $s = pack('C', $n & 255).$s;
+            $n = $n >> 8;
         }
-        $break = false;
+        $break = true;
         foreach ($this->range(strlen($s)) as $i) {
-            if ($s[$i] != pack("@1")[0]) {
-                $break = true;
+            if ($s[$i] != pack("@")[0]) {
+                $break = false;
                 break;
             }
         }
-        if(!$break) {
+        if($break) {
             $s = pack("@1");
             $i = 0;
         }
         $s = substr($s, $i);
-        if ($blocksize > 0 && strlen($s) % $blocksize) {
-            $s = pack('@'.($blocksize - (strlen($s) % $blocksize))).$s;
+        if (strlen($s) < $blocksize) {
+            $s = pack('@'.($blocksize - strlen($s))).$s;
+        } else if(strlen($s) > $blocksize) {
+            trigger_error("Generated data length (".strlen($s).") is bigger than required length (".$blocksize.").");
         }
         return $s;
     }
     /**
-     * manual_q_unpack.
+     * num_unpack.
      *
-     * Convert a byte string to a long integer.
-     * This is (essentially) the inverse of long_to_bytes().
+     * Convert a byte string to an integer.
+     * This is (essentially) the inverse of num_pack().
      *
      * @param	$s		    Data to unpack
+     * @param	$blocksize	Block size
+     * @param      $unsigned   Boolean that determines whether to work in signed or unsigned mode
      *
-     * @return Foat or int with the unpack value
+     * @return Float or int with the unpack value
      **/
-    public function num_unpack($s)
+    public function num_unpack($s, $blocksize, $unsigned)
     {
-        $acc = 0;
         $length = strlen($s);
-        if ((bool)($length % 4)) {
-            $extra = (4 - ($length % 4));
-            $s = pack('@'.$extra).$s;
-            $length += $extra;
+        $bitnumber = $blocksize * 8;
+        if($length != $blocksize) {
+            trigger_error("Given data length (".$length.") is different from the required length (".$blocksize.").");
         }
-        foreach ($this->range(0, $length, 4) as $i) {
-            $acc = ($acc << 32) + $this->unpack('>I', substr($s, $i, 4))[0];
+        $acc = 0;
+        foreach ($this->range(0, $length, 1) as $i) {
+            $acc = ($acc << 8) + unpack('C', substr($s, $i, 1))[1];
+        }
+        if(!$unsigned && $acc > (pow(2, ($bitnumber)-1) - 1)) {
+            $acc = (($acc) ^ (pow(2, $bitnumber) - 1)) + 1;
         }
         return $acc;
     }
