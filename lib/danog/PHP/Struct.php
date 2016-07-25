@@ -263,16 +263,24 @@ class Struct
             try {
                 switch ($command['modifiers']['TYPE']) {
                     case 'int':
-                        $data[$command['datakey']] = (int) $data[$command['datakey']];
+                        if (!is_int($data[$command['datakey']]) && !is_float($data[$command['datakey']])) {
+                            $data[$command['datakey']] = (int)$data[$command['datakey']];
+                        }
                         break;
                     case 'float':
-                        $data[$command['datakey']] = (float) $data[$command['datakey']];
+                        if (!is_float($data[$command['datakey']])) {
+                            $data[$command['datakey']] = (float) $data[$command['datakey']];
+                        }
                         break;
                     case 'string':
-                        $data[$command['datakey']] = (string) $data[$command['datakey']];
+                        if (!is_string($data[$command['datakey']])) {
+                            $data[$command['datakey']] = (string) $data[$command['datakey']];
+                        }
                         break;
                     case 'bool':
-                        $data[$command['datakey']] = (bool) $data[$command['datakey']];
+                        if (!is_bool($data[$command['datakey']])) {
+                            $data[$command['datakey']] = (bool) $data[$command['datakey']];
+                        }
                         break;
                     default:
                         break;
@@ -304,7 +312,7 @@ class Struct
                         break;
                 }
             } catch (StructException $e) {
-                throw new StructException('An error occurred while packing data at offset '.$key.' ('.$e->getMessage().').');
+                throw new StructException('An error occurred while packing data at offset '.$data[$command['datakey']].' ('.$e->getMessage().').');
             }
             if ($command['modifiers']['FORMAT_ENDIANNESS'] != $command['modifiers']['BIG_ENDIAN']){
                 $curresult = strrev($curresult);
@@ -401,7 +409,7 @@ class Struct
                         break;
                 }
             } catch (StructException $e) {
-                throw new StructException('An error occurred while unpacking data at offset '.$key.' ('.$e->getMessage().').');
+                throw new StructException('An error occurred while unpacking data at offset '.$command['datakey'].' ('.$e->getMessage().').');
             }
             switch ($command['modifiers']['TYPE']) {
                 case 'int':
@@ -712,7 +720,7 @@ class Struct
             $acc = ($acc << 8) + unpack('C', substr($s, $i, 1))[1];
         }
         if(!$unsigned && $acc > (pow(2, ($bitnumber)-1) - 1)) {
-            $acc = (($acc) ^ (pow(2, $bitnumber) - 1)) + 1;
+            $acc = -((($acc) ^ (pow(2, $bitnumber) - 1)) + 1);
         }
         return $acc;
     }
