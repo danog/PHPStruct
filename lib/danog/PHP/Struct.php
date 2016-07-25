@@ -642,9 +642,87 @@ class Struct
 
         return $count;
     }
-
     /**
-     * num_pack_unsigned.
+     * decbin.
+     *
+     *  Returns a string containing a binary representation of the given number argument. 
+     *
+     * @param	$number		Decimal number to turn into binary
+     *
+     * @return int with the total length
+     **/
+    public function decbin($number) {
+        $concat = '';
+        while ($number > 0) {
+            $concat = ((string)$number % 2) . $concat;
+            $number = floor($number / 2);
+        }
+        return $concat;
+    }
+    public function bindec($binary) {
+        $decimal = 0;
+        foreach(str_split($binary) as $n => $bit) {
+            $decimal += (pow(2, $n) * $bit);
+        }
+        return $decimal;
+    }
+    /**
+     * stringnot.
+     *
+     *  Performs a NOT operation on every bit in the string (by bit I mean a literal 1 or 0)
+     *
+     * @param	$string String to xor
+     *
+     * @return xored string
+     **/
+    public function stringnot($string) {
+        foreach (str_split($string) as $key => $char) {
+            if($char == "0") {
+                $string[$key] = "1";
+            } else if($char == "1") {
+                $string[$key] = "0";
+            } else {
+                trigger_error("Found unrecognized char ".$char." at string offset " . $key);
+            }
+        }
+        return $string;
+    }
+   /**
+     * binadd.
+     *
+     *  Add two binary numbers
+     *
+     * @param	$x First binary number
+     * @param	$y Second binary number
+     *
+     * @return sum of the two numbers
+     **/
+    public function binadd($x,$y){
+        $maxlen = max(strlen($x), strlen($y));
+
+        #Normalize lengths
+        $x = str_pad($x, $maxlen, "0", STR_PAD_LEFT);
+        $y = str_pad($y, $maxlen, "0", STR_PAD_LEFT);
+
+        $result = '';
+        $carry = 0;
+        foreach(array_reverse($this->range(0, $maxlen)) as $i) {
+            $r = $carry;
+            $r += ($x[$i] == '1') ? 1 : 0;
+            $r += ($y[$i] == '1') ? 1 : 0;
+
+            # r can be 0,1,2,3 (carry + x[i] + y[i])
+            # and among these, for r==1 and r==3 you will have result bit = 1
+            # for r==2 and r==3 you will have carry = 1
+            
+            $result = (($r % 2 == 1) ? '1' : '0') . $result;
+            $carry = ($r < 2) ? 0 : 1;
+        }
+        if ($carry != 0) $result = '1' . $result; 
+        return str_pad($result, $maxlen, "0", STR_PAD_LEFT);
+    }
+    /**
+     * num_pack.
      *
      * Convert a number to a byte string.
      * If optional blocksize is given and greater than zero, pad the front of the
@@ -671,12 +749,13 @@ class Struct
             trigger_error('Number is not within required range ('.$min.' <= number <= '.$max.').');
         }
         if (!$unsigned && $n < 0) {
-            $n = (-($n) ^ (pow(2, $bitnumber) - 1)) + 1;
-        }
+            $bits = $this->binadd($this->stringnot(str_pad($this->decbin(-$n), $bitnumber, "0", STR_PAD_LEFT)), '1');
+        } else $bits = str_pad($this->decbin($n), $bitnumber, "0", STR_PAD_LEFT);
         $s = null;
-        while ($n > 0) {
-            $s = pack('C', $n & 255).$s;
-            $n = $n >> 8;
+
+        foreach (explode("2", wordwrap($bits, 8, "2", true)) as $byte) {
+//var_dump(bindec($byte));
+            $s .= chr(bindec($byte));
         }
         $break = true;
         foreach ($this->range(strlen($s)) as $i) {
@@ -718,15 +797,16 @@ class Struct
         if ($length != $blocksize) {
             trigger_error('Given data length ('.$length.') is different from the required length ('.$blocksize.').');
         }
-        $acc = 0;
-        foreach ($this->range(0, $length, 1) as $i) {
-            $acc = ($acc << 8) + unpack('C', substr($s, $i, 1))[1];
+        $bits = '';
+        foreach (str_split($s) as $i) {
+//var_dump(ord($i));
+            $bits .= $this->decbin(ord($i));
         }
-        if (!$unsigned && $acc > (pow(2, ($bitnumber) - 1) - 1)) {
-            $acc = -((($acc) ^ (pow(2, $bitnumber) - 1)) + 1);
+        $bits = str_pad($bits, $bitnumber, "0", STR_PAD_LEFT);
+        if(!$unsigned && $bits[0] == "1"){
+            $bits = $this->binadd($this->stringnot($bits), '1');
         }
-
-        return $acc;
+        return $this->bindec($bits);
     }
 
     /**
