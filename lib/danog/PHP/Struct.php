@@ -105,7 +105,7 @@ class Struct
             'L' => strlen(pack($this->NATIVE_FORMATS['L'], 700)),
             'q' => $this->IS64BIT ? strlen(pack($this->NATIVE_FORMATS['q'], 700)) : 8,
             'Q' => $this->IS64BIT ? strlen(pack($this->NATIVE_FORMATS['Q'], 700)) : 8,
-            
+
             // Floating point formats
             'f' => strlen(pack($this->NATIVE_FORMATS['f'], 2.0)),
             'd' => strlen(pack($this->NATIVE_FORMATS['d'], 2.0)),
@@ -185,42 +185,42 @@ class Struct
         $this->LITTLE_ENDIAN_TABLE = array_merge($this->ENDIANNESS_TABLE, array_fill_keys(['x', 'c', 'b', 'B', '?', 's', 'p'], false));
         $this->BIG_ENDIAN_TABLE = array_merge($this->ENDIANNESS_TABLE, array_fill_keys(['x', 'c', 'b', 'B', '?', 's', 'p'], true));
         $this->NATIVE_ENDIAN_TABLE = $this->BIG_ENDIAN ? $this->BIG_ENDIAN_TABLE : $this->LITTLE_ENDIAN_TABLE;
-        
+
         $this->MODIFIERS = [
             '<' => [
                 'BIG_ENDIAN' => false,
                 'ENDIANNESS' => $this->LITTLE_ENDIAN_TABLE,
-                'SIZE' => $this->SIZE,
-                'FORMATS' => $this->FORMATS,
-                'TYPE' => $this->TYPE
+                'SIZE'       => $this->SIZE,
+                'FORMATS'    => $this->FORMATS,
+                'TYPE'       => $this->TYPE,
             ],
             '>' => [
                 'BIG_ENDIAN' => true,
                 'ENDIANNESS' => $this->BIG_ENDIAN_TABLE,
-                'SIZE' => $this->SIZE,
-                'FORMATS' => $this->FORMATS,
-                'TYPE' => $this->TYPE
+                'SIZE'       => $this->SIZE,
+                'FORMATS'    => $this->FORMATS,
+                'TYPE'       => $this->TYPE,
             ],
             '!' => [
                 'BIG_ENDIAN' => true,
                 'ENDIANNESS' => $this->BIG_ENDIAN_TABLE,
-                'SIZE' => $this->SIZE,
-                'FORMATS' => $this->FORMATS,
-                'TYPE' => $this->TYPE
+                'SIZE'       => $this->SIZE,
+                'FORMATS'    => $this->FORMATS,
+                'TYPE'       => $this->TYPE,
             ],
             '=' => [
                 'BIG_ENDIAN' => $this->BIG_ENDIAN,
                 'ENDIANNESS' => $this->NATIVE_ENDIAN_TABLE,
-                'SIZE' => $this->SIZE,
-                'FORMATS' => $this->FORMATS, 
-                'TYPE' => $this->TYPE
+                'SIZE'       => $this->SIZE,
+                'FORMATS'    => $this->FORMATS,
+                'TYPE'       => $this->TYPE,
             ],
             '@' => [
-                'BIG_ENDIAN' => $this->BIG_ENDIAN, 
+                'BIG_ENDIAN' => $this->BIG_ENDIAN,
                 'ENDIANNESS' => $this->NATIVE_ENDIAN_TABLE,
-                'SIZE' => $this->NATIVE_SIZE, 
-                'FORMATS' => $this->NATIVE_FORMATS, 
-                'TYPE' => $this->NATIVE_TYPE
+                'SIZE'       => $this->NATIVE_SIZE,
+                'FORMATS'    => $this->NATIVE_FORMATS,
+                'TYPE'       => $this->NATIVE_TYPE,
             ],
         ];
     }
@@ -236,7 +236,7 @@ class Struct
         if (error_reporting() === 0) {
             return true; // return true to continue through the others error handlers
         }
-        throw new StructException($errstr . " on line " . $errline, $errno);
+        throw new StructException($errstr.' on line '.$errline, $errno);
     }
 
     /**
@@ -264,7 +264,7 @@ class Struct
                 switch ($command['modifiers']['TYPE']) {
                     case 'int':
                         if (!is_int($data[$command['datakey']]) && !is_float($data[$command['datakey']])) {
-                            $data[$command['datakey']] = (int)$data[$command['datakey']];
+                            $data[$command['datakey']] = (int) $data[$command['datakey']];
                         }
                         break;
                     case 'float':
@@ -314,11 +314,11 @@ class Struct
             } catch (StructException $e) {
                 throw new StructException('An error occurred while packing data at offset '.$data[$command['datakey']].' ('.$e->getMessage().').');
             }
-            if ($command['modifiers']['FORMAT_ENDIANNESS'] != $command['modifiers']['BIG_ENDIAN']){
+            if ($command['modifiers']['FORMAT_ENDIANNESS'] != $command['modifiers']['BIG_ENDIAN']) {
                 $curresult = strrev($curresult);
             } // Reverse if wrong endianness
-            if(strlen($curresult) != $command['modifiers']['SIZE'] * $command['count']) {
-                throw new StructException("Size of packed data from format char " . $command['format'] ." (".strlen($curresult).") isn't equal to expected size (".$command['modifiers']['SIZE'] * $command['count'].").");
+            if (strlen($curresult) != $command['modifiers']['SIZE'] * $command['count']) {
+                throw new StructException('Size of packed data from format char '.$command['format'].' ('.strlen($curresult).") isn't equal to expected size (".$command['modifiers']['SIZE'] * $command['count'].').');
             }
             /*
             if (strlen($curresult) > $command['modifiers']['SIZE'] * $command['count']) {
@@ -414,12 +414,12 @@ class Struct
             switch ($command['modifiers']['TYPE']) {
                 case 'int':
                     if (!is_int($result[$arraycount]) && !is_float($result[$arraycount])) {
-                        $result[$arraycount] = (int)$result[$arraycount];
+                        $result[$arraycount] = (int) $result[$arraycount];
                     }
                     break;
                 case 'float':
                     if (!is_float($result[$arraycount])) {
-                        $result[$arraycount] = (float)$result[$arraycount];
+                        $result[$arraycount] = (float) $result[$arraycount];
                     }
 
                     break;
@@ -429,12 +429,12 @@ class Struct
                     break;
                 case 'string':
                     if (!is_string($result[$arraycount])) {
-                        $result[$arraycount] = (string)$result[$arraycount];
+                        $result[$arraycount] = (string) $result[$arraycount];
                     }
                     break;
                 case 'bool':
                     if (!is_bool($result[$arraycount])) {
-                        $result[$arraycount] = (bool)$result[$arraycount];
+                        $result[$arraycount] = (bool) $result[$arraycount];
                     }
                     break;
                 default:
@@ -530,10 +530,10 @@ class Struct
                     $result[$formatcharcount]['phpformat'] = $modifier['FORMATS'][$currentformatchar]; // Set format
                     $result[$formatcharcount]['count'] = $count;
                     $result[$formatcharcount]['modifiers'] = [
-                        'BIG_ENDIAN' => $modifier['BIG_ENDIAN'], 
-                        'FORMAT_ENDIANNESS' => $modifier['ENDIANNESS'][$currentformatchar], 
-                        'SIZE' => $modifier['SIZE'][$currentformatchar], 
-                        'TYPE' => $modifier['TYPE'][$currentformatchar]
+                        'BIG_ENDIAN'        => $modifier['BIG_ENDIAN'],
+                        'FORMAT_ENDIANNESS' => $modifier['ENDIANNESS'][$currentformatchar],
+                        'SIZE'              => $modifier['SIZE'][$currentformatchar],
+                        'TYPE'              => $modifier['TYPE'][$currentformatchar],
                     ];
                     if ($unpack) {
                         if ($arraycount[$datarraycount] != $result[$formatcharcount]['count'] * $result[$formatcharcount]['modifiers']['SIZE']) {
@@ -642,6 +642,7 @@ class Struct
 
         return $count;
     }
+
     /**
      * num_pack_unsigned.
      *
@@ -652,24 +653,24 @@ class Struct
      *
      * @param	$s		    Number to pack
      * @param	$blocksize	Block size
-     * @param      $unsigned   Boolean that determines whether to work in signed or unsigned mode
+     * @param   $unsigned Boolean that determines whether to work in signed or unsigned mode
      *
      * @return Byte string
      **/
-    public function num_pack($n, $blocksize = 1, $unsigned)
+    public function num_pack($n, $blocksize, $unsigned)
     {
-       $bitnumber = $blocksize * 8;
-       if($unsigned) {
+        $bitnumber = $blocksize * 8;
+        if ($unsigned) {
             $max = pow(2, $bitnumber) - 1;
             $min = 0;
         } else {
-            $max = pow(2, $bitnumber-1) - 1;
-            $min = -pow(2, $bitnumber-1);
+            $max = pow(2, $bitnumber - 1) - 1;
+            $min = -pow(2, $bitnumber - 1);
         }
-        if($n < $min || $n > $max) {
-            trigger_error("Number is not within required range (".$min." <= number <= ".$max.").");
+        if ($n < $min || $n > $max) {
+            trigger_error('Number is not within required range ('.$min.' <= number <= '.$max.').');
         }
-        if(!$unsigned && $n < 0) {
+        if (!$unsigned && $n < 0) {
             $n = (-($n) ^ (pow(2, $bitnumber) - 1)) + 1;
         }
         $s = null;
@@ -679,23 +680,25 @@ class Struct
         }
         $break = true;
         foreach ($this->range(strlen($s)) as $i) {
-            if ($s[$i] != pack("@")[0]) {
+            if ($s[$i] != pack('@')[0]) {
                 $break = false;
                 break;
             }
         }
-        if($break) {
-            $s = pack("@1");
+        if ($break) {
+            $s = pack('@1');
             $i = 0;
         }
         $s = substr($s, $i);
         if (strlen($s) < $blocksize) {
             $s = pack('@'.($blocksize - strlen($s))).$s;
-        } else if(strlen($s) > $blocksize) {
-            trigger_error("Generated data length (".strlen($s).") is bigger than required length (".$blocksize.").");
+        } elseif (strlen($s) > $blocksize) {
+            trigger_error('Generated data length ('.strlen($s).') is bigger than required length ('.$blocksize.').');
         }
+
         return $s;
     }
+
     /**
      * num_unpack.
      *
@@ -704,26 +707,28 @@ class Struct
      *
      * @param	$s		    Data to unpack
      * @param	$blocksize	Block size
-     * @param      $unsigned   Boolean that determines whether to work in signed or unsigned mode
+     * @param   $unsigned Boolean that determines whether to work in signed or unsigned mode
      *
-     * @return Float or int with the unpack value
+     * @return float or int with the unpack value
      **/
     public function num_unpack($s, $blocksize, $unsigned)
     {
         $length = strlen($s);
         $bitnumber = $blocksize * 8;
-        if($length != $blocksize) {
-            trigger_error("Given data length (".$length.") is different from the required length (".$blocksize.").");
+        if ($length != $blocksize) {
+            trigger_error('Given data length ('.$length.') is different from the required length ('.$blocksize.').');
         }
         $acc = 0;
         foreach ($this->range(0, $length, 1) as $i) {
             $acc = ($acc << 8) + unpack('C', substr($s, $i, 1))[1];
         }
-        if(!$unsigned && $acc > (pow(2, ($bitnumber)-1) - 1)) {
+        if (!$unsigned && $acc > (pow(2, ($bitnumber) - 1) - 1)) {
             $acc = -((($acc) ^ (pow(2, $bitnumber) - 1)) + 1);
         }
+
         return $acc;
     }
+
     /**
      * range.
      *
@@ -732,9 +737,10 @@ class Struct
      * @param	$start		Beginning of the range (or stop if no other params are specified)
      * @param	$stop		End of the range
      * @param	$step		Step to use in range
+     *
      * @return array with the range
      **/
-    function range($start, $stop = null, $step = 1)
+    public function range($start, $stop = null, $step = 1)
     {
         if ($stop === null) {
             $stop = $start;
@@ -743,16 +749,19 @@ class Struct
         if ($stop <= $start && $step < 0) {
             $arr = range($stop, $start, -$step);
             array_pop($arr);
+
             return array_reverse($arr, false);
         }
-        if($step > 1 && $step > ($stop - $start)) {
-            $arr = [ $start ];
+        if ($step > 1 && $step > ($stop - $start)) {
+            $arr = [$start];
         } else {
             $arr = range($start, $stop, $step);
             array_pop($arr);
         }
+
         return $arr;
     }
+
     /**
      * count.
      *
