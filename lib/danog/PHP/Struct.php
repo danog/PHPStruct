@@ -311,15 +311,15 @@ class Struct
                         $curresult = pack($command['phpformat'].$command['count'], $data[$command['datakey']]); // Pack current char
                         break;
                 }
+                if (strlen($curresult) != $command['modifiers']['SIZE'] * $command['count']){
+                    trigger_error('Size of packed data '.strlen($curresult)." isn't equal to expected size ".$command['modifiers']['SIZE'] * $command['count'].'.');
+                } 
             } catch (StructException $e) {
-                throw new StructException('An error occurred while packing data at offset '.$data[$command['datakey']].' ('.$e->getMessage().').');
+                throw new StructException('An error occurred while packing '.$data[$command['datakey']].' at offset '.$command['datakey'].' ('.$e->getMessage().').');
             }
             if ($command['modifiers']['FORMAT_ENDIANNESS'] != $command['modifiers']['BIG_ENDIAN']) {
                 $curresult = strrev($curresult);
             } // Reverse if wrong endianness
-            if (strlen($curresult) != $command['modifiers']['SIZE'] * $command['count']) {
-                throw new StructException('Size of packed data from format char '.$command['format'].' ('.strlen($curresult).") isn't equal to expected size (".$command['modifiers']['SIZE'] * $command['count'].').');
-            }
             /*
             if (strlen($curresult) > $command['modifiers']['SIZE'] * $command['count']) {
                 if ($command['modifiers']['BIG_ENDIAN']) {
@@ -560,7 +560,16 @@ class Struct
 
         return $result;
     }
-
+   /**
+     * binadd.
+     *
+     *  Convert a binary string to an array based on the given format string
+     *
+     * @param	$format Format string
+     * @param	$data   Data to convert to array
+     *
+     * @return array
+     **/
     public function data2array($format, $data)
     {
         $dataarray = [];
@@ -606,65 +615,53 @@ class Struct
         return $dataarray;
     }
 
-    /**
-     * array_each_strlen.
-     *
-     * Get length of each array element.
-     *
-     * @param	$array		Array to parse
-     *
-     * @return array with lengths
-     **/
-    public function array_each_strlen($array)
-    {
-        foreach ($array as &$value) {
-            $value = $this->count($value);
-        }
 
-        return $array;
-    }
-
-    /**
-     * array_total_strlen.
-     *
-     * Get total length of every array element.
-     *
-     * @param	$array		Array to parse
-     *
-     * @return int with the total length
-     **/
-    public function array_total_strlen($array)
-    {
-        $count = 0;
-        foreach ($array as $value) {
-            $count += $this->count($value);
-        }
-
-        return $count;
-    }
     /**
      * decbin.
      *
-     *  Returns a string containing a binary representation of the given number argument. 
+     *  Returns a string containing a big endian binary representation of the given decimal number.
+     *  Also pads binary number with zeros to match given $length
      *
      * @param	$number		Decimal number to turn into binary
+     * @param	$length		Length to reach through padding
      *
-     * @return int with the total length
+     * @return binary version of the given number
      **/
-    public function decbin($number) {
+    public function decbin($number, $length) {
         $concat = '';
+        if($number < 0){
+            $negative = true;
+            $number = -$number;
+        } else $negative = false;
         while ($number > 0) {
             $concat = ((string)$number % 2) . $concat;
             $number = floor($number / 2);
         }
+        $concat = str_pad($concat, $length, "0", STR_PAD_LEFT);
+        if($negative) $concat = $this->binadd($this->stringnot($concat), '1');
+        if(strlen($concat) > $length) trigger_error("Converted binary number is too long (".strlen($concat)." > ".$length.").");
         return $concat;
     }
-    public function bindec($binary) {
+    /**
+     * bindec.
+     *
+     *  Converts a binary number to a decimal. 
+     *
+     * @param	$binary		binary number to turn into decimal
+     * @param	$unsigned	if set to false will interpret binary string as signed
+     *
+     * @return deciaml version of the given number
+     **/
+    public function bindec($binary, $unsigned = true) {
         $decimal = 0;
+        if(!$unsigned && $binary[0] == "1") {
+            $binary = $this->binadd($this->stringnot($binary), '1');
+            $negative = -1;
+        } else $negative = 1;
         foreach (str_split(strrev($binary)) as $n => $bit) {
             $decimal += (pow(2, $n) * $bit);
         }
-        return $decimal;
+        return $decimal * $negative;
     }
     /**
      * stringnot.
@@ -748,9 +745,7 @@ class Struct
         if ($n < $min || $n > $max) {
             trigger_error('Number is not within required range ('.$min.' <= number <= '.$max.').');
         }
-        if (!$unsigned && $n < 0) {
-            $bits = $this->binadd($this->stringnot(str_pad($this->decbin(-$n), $bitnumber, "0", STR_PAD_LEFT)), '1');
-        } else $bits = str_pad($this->decbin($n), $bitnumber, "0", STR_PAD_LEFT);
+        $bits = $this->decbin($n, $bitnumber);
         $s = null;
         foreach (explode("2", wordwrap($bits, 8, "2", true)) as $byte) {
             $s .= chr($this->bindec($byte));
@@ -797,17 +792,46 @@ class Struct
         }
         $bits = '';
         foreach (str_split($s) as $i) {
-            $bits .= str_pad($this->decbin(ord($i)), 8, "0", STR_PAD_LEFT);
+            $bits .= $this->decbin(ord($i), 8);
         }
-        $bits = str_pad($bits, $bitnumber, "0", STR_PAD_LEFT);
+        return $this->bindec($bits, $unsigned);
+    }
+    /**
+     * array_each_strlen.
+     *
+     * Get length of each array element.
+     *
+     * @param	$array		Array to parse
+     *
+     * @return array with lengths
+     **/
+    public function array_each_strlen($array)
+    {
+        foreach ($array as &$value) {
+            $value = $this->count($value);
+        }
 
-        if(!$unsigned && $bits[0] == "1"){
-            $bits = $this->binadd($this->stringnot($bits), '1');
-            $minus = -1;
-        } else $minus = 1;
-        return $this->bindec($bits) * $minus;
+        return $array;
     }
 
+    /**
+     * array_total_strlen.
+     *
+     * Get total length of every array element.
+     *
+     * @param	$array		Array to parse
+     *
+     * @return int with the total length
+     **/
+    public function array_total_strlen($array)
+    {
+        $count = 0;
+        foreach ($array as $value) {
+            $count += $this->count($value);
+        }
+
+        return $count;
+    }
     /**
      * range.
      *
