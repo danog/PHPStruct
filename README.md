@@ -28,7 +28,7 @@ It has lots of advantages over PHP's native implementation of pack and unpack, s
 * The q and Q formats can be used even on 32 bit systems.
 
 
-For now custom byte size may not work properly on certain machines for the i, I, f and d formats.
+For now custom byte size may not work properly on certain machines for the f and d formats.
 
 ## Installation
 
@@ -38,7 +38,7 @@ composer require danog/phpstruct
 ```
 
 # Usage
-
+Dynamic (recommended)  
 ```
 require('vendor/autoload.php');
 $struct = new \danog\PHP\Struct();
@@ -46,9 +46,20 @@ $pack = $struct->pack("2cxi", "ab", 44);
 $unpack = $struct->unpack("2cxi", $pack);
 var_dump($unpack);
 $count = $struct->calcsize("2cxi");
+```  
+
+Dynamic (while specifying format string during istantiation)  
+```
+require('vendor/autoload.php');
+$struct = new \danog\PHP\Struct("2cxi");
+$pack = $struct->pack("ab", 44);
+$unpack = $struct->unpack($pack);
+var_dump($unpack);
+$count = $struct->size;
+$formatstring = $struct->format;
 ```
 
-This library can also be used statically:
+Static
 
 
 ```
