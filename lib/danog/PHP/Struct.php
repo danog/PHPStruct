@@ -661,7 +661,7 @@ class Struct
     }
     public function bindec($binary) {
         $decimal = 0;
-        foreach(str_split($binary) as $n => $bit) {
+        foreach (str_split(strrev($binary)) as $n => $bit) {
             $decimal += (pow(2, $n) * $bit);
         }
         return $decimal;
@@ -752,10 +752,8 @@ class Struct
             $bits = $this->binadd($this->stringnot(str_pad($this->decbin(-$n), $bitnumber, "0", STR_PAD_LEFT)), '1');
         } else $bits = str_pad($this->decbin($n), $bitnumber, "0", STR_PAD_LEFT);
         $s = null;
-
         foreach (explode("2", wordwrap($bits, 8, "2", true)) as $byte) {
-//var_dump(bindec($byte));
-            $s .= chr(bindec($byte));
+            $s .= chr($this->bindec($byte));
         }
         $break = true;
         foreach ($this->range(strlen($s)) as $i) {
@@ -799,14 +797,15 @@ class Struct
         }
         $bits = '';
         foreach (str_split($s) as $i) {
-//var_dump(ord($i));
-            $bits .= $this->decbin(ord($i));
+            $bits .= str_pad($this->decbin(ord($i)), 8, "0", STR_PAD_LEFT);
         }
         $bits = str_pad($bits, $bitnumber, "0", STR_PAD_LEFT);
+
         if(!$unsigned && $bits[0] == "1"){
             $bits = $this->binadd($this->stringnot($bits), '1');
-        }
-        return $this->bindec($bits);
+            $minus = -1;
+        } else $minus = 1;
+        return $this->bindec($bits) * $minus;
     }
 
     /**
