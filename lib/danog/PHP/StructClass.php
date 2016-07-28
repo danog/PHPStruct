@@ -79,6 +79,6 @@ class StructClass {
      */
     public function calcsize($format = null)
     {
-        return ($struct->format !== null && $struct->size !== null) ? $struct->size : $this->struct->calcsize($format);
+        return ($this->format !== null && $this->size !== null) ? $this->size : $this->struct->calcsize($format);
     }
 }

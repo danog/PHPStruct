@@ -177,7 +177,6 @@ class StructTools
             'n' => true,
             'N' => true,
             'P' => true,
-
             'f' => $this->BIG_ENDIAN,
             'd' => $this->BIG_ENDIAN,
 
@@ -260,7 +259,6 @@ class StructTools
         $format = $this->padformat($format);
         $result = null; // Data to return
         $size = $this->calcsize($format);
-        var_dump($size);
         $packcommand = $this->parseformat($format, $this->array_each_strlen($data)); // Get pack parameters
         set_error_handler([$this, 'ExceptionErrorHandler']);
         foreach ($packcommand as $key => $command) {
@@ -296,7 +294,8 @@ class StructTools
                     case 'p':
                         $curresult = pack('c', ($command['count'] - 1 > 255) ? 255 : $command['count'] - 1).pack('a'.($command['count'] - 1), $data[$command['datakey']]);
                         break;
-                    /*case 'q':
+                    
+                    case 'q':
                     case 'Q':
                     case 'l':
                     case 'L':
@@ -307,7 +306,8 @@ class StructTools
                     case 'c':
                     case 'C':
                         $curresult = $this->num_pack($data[$command['datakey']], $command['modifiers']['SIZE'], ctype_upper($command['phpformat']));
-                        break;*/
+                        break;
+                        
                     case '?':
                         $curresult = pack('c'.$command['count'], $data[$command['datakey']]); // Pack current char
                         break;
@@ -393,6 +393,7 @@ class StructTools
                             $result[$arraycount] = true;
                         }
                         break;
+                    
                     case 'q':
                     case 'Q':
                     case 'l':
@@ -405,6 +406,7 @@ class StructTools
                     case 'C':
                         $result[$arraycount] = $this->num_unpack($dataarray[$command['datakey']], $command['modifiers']['SIZE'], ctype_upper($command['phpformat']));
                         break;
+                    
                     default:
                         $result[$arraycount] = implode('', unpack($command['phpformat'].$command['count'], $dataarray[$command['datakey']])); // Unpack current char
                         break;
@@ -478,7 +480,6 @@ class StructTools
                 throw new StructException('Unkown format or modifier supplied ('.$currentformatchar.' at offset '.$offset.').');
             }
         }
-
         return $size;
     }
 
@@ -624,6 +625,7 @@ class StructTools
         foreach (str_split($format) as $offset => $currentformatchar) { // Current format char
             if (isset($this->MODIFIERS[$currentformatchar])) { // If current format char is a modifier
                 $modifier = $this->MODIFIERS[$currentformatchar]; // Set the modifiers for the current format char
+                $result = $currentformatchar;
             } elseif (is_numeric($currentformatchar) && ((int) $currentformatchar >= 0 || (int) $currentformatchar <= 9)) {
                 $count .= (int) $currentformatchar; // Set the count for the current format char
             } elseif (isset($modifier['FORMATS'][$currentformatchar])) {
@@ -633,6 +635,7 @@ class StructTools
                 $count = (int) $count;
                 if ($currentformatchar == 's' || $currentformatchar == 'p') {
                     $result .= $count.$currentformatchar;
+                    $totallength += $modifier['SIZE'][$currentformatchar] * $count;
                 } else {
                     for ($x = 0; $x < $count; $x++) {
                         if($modifier['MODIFIER'] == '@'){
@@ -830,7 +833,6 @@ class StructTools
         foreach (str_split($s) as $i) {
             $bits .= $this->decbin(ord($i), 8);
         }
-        //var_dump($bits);
         return $this->bindec($bits, $unsigned);
     }
     /**
