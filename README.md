@@ -41,7 +41,7 @@ composer require danog/phpstruct
 Dynamic (recommended)  
 ```
 require('vendor/autoload.php');
-$struct = new \danog\PHP\Struct();
+$struct = new \danog\PHP\StructClass();
 $pack = $struct->pack("2cxi", "ab", 44);
 $unpack = $struct->unpack("2cxi", $pack);
 var_dump($unpack);
@@ -51,7 +51,7 @@ $count = $struct->calcsize("2cxi");
 Dynamic (while specifying format string during istantiation)  
 ```
 require('vendor/autoload.php');
-$struct = new \danog\PHP\Struct("2cxi");
+$struct = new \danog\PHP\StructClass("2cxi");
 $pack = $struct->pack("ab", 44);
 $unpack = $struct->unpack($pack);
 var_dump($unpack);

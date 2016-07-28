@@ -12,26 +12,23 @@ namespace danog\PHP;
  * @author		Daniil Gentili <daniil@daniil.it>
  * @license		MIT license
  */
-// Wrapper class
-class Struct extends StructTools
+// Struct class (for static access)
+class Struct
 {
     /**
      * pack.
      *
      * Packs data into bytes
      *
-     * @param	...$data	Parameters to encode (may also contain format string)
+     * @param	$format	    Format string
+     * @param	...$data	Parameters to encode
      *
      * @return Encoded data
      */
-    public function pack(...$data)
+    public static function pack($format, ...$data)
     {
-        if (!(isset($this) && get_class($this) == __CLASS__) || $this->format == null) {
-            $struct = new \danog\PHP\Struct(array_shift($data));
-            return $struct->_pack(...$data);
-        }
-
-        return $this->_pack(...$data);
+        $struct = new \danog\PHP\StructClass($format);
+        return $struct->pack(...$data);
     }
 
     /**
@@ -44,13 +41,10 @@ class Struct extends StructTools
      *
      * @return Decoded data
      */
-    public function unpack($format, $data = null)
+    public static function unpack($format, $data)
     {
-        if (!(isset($this) && get_class($this) == __CLASS__) || $this->format == null) {
-            $struct = new \danog\PHP\Struct($format);
-            return $struct->_unpack($data);
-        }
-        return $this->_unpack($format);
+        $struct = new \danog\PHP\StructClass($format);
+        return $struct->unpack($data);
     }
 
     /**
@@ -63,12 +57,9 @@ class Struct extends StructTools
      *
      * @return int with size of the struct.
      */
-    public function calcsize($format = null)
+    public static function calcsize($format)
     {
-        if (!(isset($this) && get_class($this) == __CLASS__) || $this->format == null) {
-            $struct = new \danog\PHP\Struct($format);
-            return $struct->_calcsize();
-        }
-        return $this->_calcsize();
+        $struct = new \danog\PHP\StructClass($format);
+        return $struct->size;
     }
 }

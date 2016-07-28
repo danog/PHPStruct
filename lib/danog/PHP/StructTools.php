@@ -12,11 +12,9 @@ namespace danog\PHP;
  * @author		Daniil Gentili <daniil@daniil.it>
  * @license		MIT license
  */
-// Main class
+// Working class
 class StructTools
 {
-    public $format = null; // Will contain the format
-    public $size = null; // Will contain the size
     /**
      * Constructor.
      *
@@ -195,6 +193,7 @@ class StructTools
                 'SIZE'       => $this->SIZE,
                 'FORMATS'    => $this->FORMATS,
                 'TYPE'       => $this->TYPE,
+                'MODIFIER'   => '<'
             ],
             '>' => [
                 'BIG_ENDIAN' => true,
@@ -202,6 +201,7 @@ class StructTools
                 'SIZE'       => $this->SIZE,
                 'FORMATS'    => $this->FORMATS,
                 'TYPE'       => $this->TYPE,
+                'MODIFIER'   => '>'
             ],
             '!' => [
                 'BIG_ENDIAN' => true,
@@ -209,6 +209,7 @@ class StructTools
                 'SIZE'       => $this->SIZE,
                 'FORMATS'    => $this->FORMATS,
                 'TYPE'       => $this->TYPE,
+                'MODIFIER'   => '!'
             ],
             '=' => [
                 'BIG_ENDIAN' => $this->BIG_ENDIAN,
@@ -216,6 +217,7 @@ class StructTools
                 'SIZE'       => $this->SIZE,
                 'FORMATS'    => $this->FORMATS,
                 'TYPE'       => $this->TYPE,
+                'MODIFIER'   => '='
             ],
             '@' => [
                 'BIG_ENDIAN' => $this->BIG_ENDIAN,
@@ -223,12 +225,10 @@ class StructTools
                 'SIZE'       => $this->NATIVE_SIZE,
                 'FORMATS'    => $this->NATIVE_FORMATS,
                 'TYPE'       => $this->NATIVE_TYPE,
+                'MODIFIER'   => '@'
             ],
         ];
-        if($format !== null) {
-            $this->format = $format;
-            $this->size = $this->_calcsize();
-        }
+
     }
 
     /**
@@ -250,14 +250,18 @@ class StructTools
      *
      * Packs data into bytes
      *
+     * @param	$format		Format string
      * @param	...$data	Parameters to encode
      *
      * @return Encoded data
      */
-    public function _pack(...$data)
+    public function pack($format, ...$data)
     {
+        $format = $this->padformat($format);
         $result = null; // Data to return
-        $packcommand = $this->parseformat($this->array_each_strlen($data)); // Get pack parameters
+        $size = $this->calcsize($format);
+        var_dump($size);
+        $packcommand = $this->parseformat($format, $this->array_each_strlen($data)); // Get pack parameters
         set_error_handler([$this, 'ExceptionErrorHandler']);
         foreach ($packcommand as $key => $command) {
             try {
@@ -292,7 +296,7 @@ class StructTools
                     case 'p':
                         $curresult = pack('c', ($command['count'] - 1 > 255) ? 255 : $command['count'] - 1).pack('a'.($command['count'] - 1), $data[$command['datakey']]);
                         break;
-                    case 'q':
+                    /*case 'q':
                     case 'Q':
                     case 'l':
                     case 'L':
@@ -303,7 +307,7 @@ class StructTools
                     case 'c':
                     case 'C':
                         $curresult = $this->num_pack($data[$command['datakey']], $command['modifiers']['SIZE'], ctype_upper($command['phpformat']));
-                        break;
+                        break;*/
                     case '?':
                         $curresult = pack('c'.$command['count'], $data[$command['datakey']]); // Pack current char
                         break;
@@ -339,8 +343,8 @@ class StructTools
             $result .= $curresult;
         }
         restore_error_handler();
-        if (strlen($result) != $this->size) {
-            throw new StructException('Length of generated data ('.strlen($result).') is different from length calculated using format string ('.$this->size.').');
+        if (strlen($result) != $size) {
+            throw new StructException('Length of generated data ('.strlen($result).') is different from length calculated using format string ('.$size.').');
         }
 
         return $result;
@@ -351,22 +355,25 @@ class StructTools
      *
      * Unpacks data into an array
      *
+     * @param	$format	Format string
      * @param	$data	Data to decode
      *
      * @return Decoded data
      */
-    public function _unpack($data)
+    public function unpack($format, $data)
     {
-        if (strlen($data) != $this->size) {
-            throw new StructException('Length of given data ('.strlen($data).') is different from length calculated using format string ('.$this->size.').');
+        $format = $this->padformat($format);
+        $size = $this->calcsize($format);
+        if (strlen($data) != $size) {
+            throw new StructException('Length of given data ('.strlen($data).') is different from length calculated using format string ('.$size.').');
         }
-        $dataarray = $this->data2array($data);
+        $dataarray = $this->data2array($format, $data);
 
-        if ($this->array_total_strlen($dataarray) != $this->size) {
-            throw new StructException('Length of given data array ('.$this->array_total_strlen($dataarray).') is different from length calculated using format string ('.$this->size.').');
+        if ($this->array_total_strlen($dataarray) != $size) {
+            throw new StructException('Length of array ('.$this->array_total_strlen($dataarray).') is different from length calculated using format string ('.$size.').');
         }
         $result = []; // Data to return
-        $packcommand = $this->parseformat($this->array_each_strlen($dataarray), true); // Get unpack parameters
+        $packcommand = $this->parseformat($format, $this->array_each_strlen($dataarray), true); // Get unpack parameters
         set_error_handler([$this, 'ExceptionErrorHandler']);
         $arraycount = 0;
         foreach ($packcommand as $key => $command) {
@@ -449,13 +456,14 @@ class StructTools
      *
      * @return int with size of the struct.
      */
-    public function _calcsize()
+    public function calcsize($format)
     {
+        $format = $this->padformat($format);
         $size = 0;
         $modifier = $this->MODIFIERS['@'];
         $count = null;
-        if($this->format == '') return 0;
-        foreach (str_split($this->format) as $offset => $currentformatchar) {
+        if($format == '') return 0;
+        foreach (str_split($format) as $offset => $currentformatchar) {
             if (isset($this->MODIFIERS[$currentformatchar])) {
                 $modifier = $this->MODIFIERS[$currentformatchar]; // Set the modifiers for the current format char
             } elseif (is_numeric($currentformatchar) && ((int) $currentformatchar > 0 || (int) $currentformatchar <= 9)) {
@@ -485,7 +493,7 @@ class StructTools
      *
      * @return array with format and modifiers for each object to encode/decode
      */
-    public function parseformat($arraycount, $unpack = false)
+    public function parseformat($format, $arraycount, $unpack = false)
     {
         $datarraycount = 0; // Current element of the array to pack/unpack
         $formatcharcount = 0; // Current element to pack/unpack (sometimes there isn't a correspondant element in the array)
@@ -493,7 +501,8 @@ class StructTools
         $result = []; // Array with the results
         $count = null;
         $loopcount = 0;
-        foreach (str_split($this->format) as $offset => $currentformatchar) { // Current format char
+        $totallength = 0;
+        foreach (str_split($format) as $offset => $currentformatchar) { // Current format char
             if (!isset($result[$formatcharcount]) || !is_array($result[$formatcharcount])) {
                 $result[$formatcharcount] = []; // Create array for current element
             }
@@ -556,16 +565,15 @@ class StructTools
      *
      * @return array
      **/
-    public function data2array($data)
+    public function data2array($format, $data)
     {
         $dataarray = [];
         $dataarraykey = 0;
         $datakey = 0;
         $count = null;
         $loopcount = 0;
-
         $modifier = $this->MODIFIERS['@'];
-        foreach (str_split($this->format) as $offset => $currentformatchar) {
+        foreach (str_split($format) as $offset => $currentformatchar) {
             if (isset($this->MODIFIERS[$currentformatchar])) {
                 $modifier = $this->MODIFIERS[$currentformatchar]; // Set the modifiers for the current format char
             } elseif (is_numeric($currentformatchar) && ((int) $currentformatchar > 0 || (int) $currentformatchar <= 9)) {
@@ -597,10 +605,52 @@ class StructTools
                 throw new StructException('Unkown format or modifier supplied ('.$currentformatchar.' at offset '.$offset.').');
             }
         }
-
         return $dataarray;
     }
+   /**
+     * pdaformt.
+     *
+     *  Pad format string with x format where needed
+     *
+     * @param	$format Format string to pad
+     *
+     * @return Padded format string
+     **/
+    public function padformat($format) {
+        $modifier = $this->MODIFIERS['@'];
+        $result = null; // Result gormat string
+        $count = null;
+        $totallength = 0;
+        foreach (str_split($format) as $offset => $currentformatchar) { // Current format char
+            if (isset($this->MODIFIERS[$currentformatchar])) { // If current format char is a modifier
+                $modifier = $this->MODIFIERS[$currentformatchar]; // Set the modifiers for the current format char
+            } elseif (is_numeric($currentformatchar) && ((int) $currentformatchar >= 0 || (int) $currentformatchar <= 9)) {
+                $count .= (int) $currentformatchar; // Set the count for the current format char
+            } elseif (isset($modifier['FORMATS'][$currentformatchar])) {
+                if (!isset($count) || $count == null) {
+                    $count = 1; // Set count to 1 by default.
+                }
+                $count = (int) $count;
+                if ($currentformatchar == 's' || $currentformatchar == 'p') {
+                    $result .= $count.$currentformatchar;
+                } else {
+                    for ($x = 0; $x < $count; $x++) {
+                        if($modifier['MODIFIER'] == '@'){
+                            $result .= str_pad("", $this->posmod(-$totallength, $modifier['SIZE'][$currentformatchar]), "x");
 
+                            $totallength += $this->posmod(-$totallength, $modifier['SIZE'][$currentformatchar]) + $modifier['SIZE'][$currentformatchar];
+                        }
+                        $result .= $currentformatchar;
+                    }
+                }
+                $count = null;
+            } else {
+                throw new StructException('Unkown format or modifier supplied at offset '.$offset.' ('.$currentformatchar.').');
+            }
+        }
+
+        return $result;
+    }
 
     /**
      * decbin.
@@ -712,7 +762,7 @@ class StructTools
      * byte string with binary zeros so that the length is the
      * blocksize.
      *
-     * @param	$s		    Number to pack
+     * @param	$n		    Number to pack
      * @param	$blocksize	Block size
      * @param   $unsigned Boolean that determines whether to work in signed or unsigned mode
      *
@@ -780,7 +830,21 @@ class StructTools
         foreach (str_split($s) as $i) {
             $bits .= $this->decbin(ord($i), 8);
         }
+        //var_dump($bits);
         return $this->bindec($bits, $unsigned);
+    }
+    /**
+    * posmod(numeric,numeric) : numeric
+    * Works just like the % (modulus) operator, only returns always a postive number.
+    */
+    function posmod($a, $b)
+    {
+        $resto = $a % $b;
+        if ($resto < 0) {
+            $resto += abs($b);
+        }
+
+        return $resto;
     }
     /**
      * array_each_strlen.
