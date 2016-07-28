@@ -192,7 +192,7 @@ class StructTools
                 'SIZE'       => $this->SIZE,
                 'FORMATS'    => $this->FORMATS,
                 'TYPE'       => $this->TYPE,
-                'MODIFIER'   => '<'
+                'MODIFIER'   => '<',
             ],
             '>' => [
                 'BIG_ENDIAN' => true,
@@ -200,7 +200,7 @@ class StructTools
                 'SIZE'       => $this->SIZE,
                 'FORMATS'    => $this->FORMATS,
                 'TYPE'       => $this->TYPE,
-                'MODIFIER'   => '>'
+                'MODIFIER'   => '>',
             ],
             '!' => [
                 'BIG_ENDIAN' => true,
@@ -208,7 +208,7 @@ class StructTools
                 'SIZE'       => $this->SIZE,
                 'FORMATS'    => $this->FORMATS,
                 'TYPE'       => $this->TYPE,
-                'MODIFIER'   => '!'
+                'MODIFIER'   => '!',
             ],
             '=' => [
                 'BIG_ENDIAN' => $this->BIG_ENDIAN,
@@ -216,7 +216,7 @@ class StructTools
                 'SIZE'       => $this->SIZE,
                 'FORMATS'    => $this->FORMATS,
                 'TYPE'       => $this->TYPE,
-                'MODIFIER'   => '='
+                'MODIFIER'   => '=',
             ],
             '@' => [
                 'BIG_ENDIAN' => $this->BIG_ENDIAN,
@@ -224,10 +224,9 @@ class StructTools
                 'SIZE'       => $this->NATIVE_SIZE,
                 'FORMATS'    => $this->NATIVE_FORMATS,
                 'TYPE'       => $this->NATIVE_TYPE,
-                'MODIFIER'   => '@'
+                'MODIFIER'   => '@',
             ],
         ];
-
     }
 
     /**
@@ -294,7 +293,7 @@ class StructTools
                     case 'p':
                         $curresult = pack('c', ($command['count'] - 1 > 255) ? 255 : $command['count'] - 1).pack('a'.($command['count'] - 1), $data[$command['datakey']]);
                         break;
-                    
+
                     case 'q':
                     case 'Q':
                     case 'l':
@@ -307,7 +306,7 @@ class StructTools
                     case 'C':
                         $curresult = $this->num_pack($data[$command['datakey']], $command['modifiers']['SIZE'], ctype_upper($command['phpformat']));
                         break;
-                        
+
                     case '?':
                         $curresult = pack('c'.$command['count'], $data[$command['datakey']]); // Pack current char
                         break;
@@ -315,9 +314,9 @@ class StructTools
                         $curresult = pack($command['phpformat'].$command['count'], $data[$command['datakey']]); // Pack current char
                         break;
                 }
-                if (strlen($curresult) != $command['modifiers']['SIZE'] * $command['count']){
+                if (strlen($curresult) != $command['modifiers']['SIZE'] * $command['count']) {
                     trigger_error('Size of packed data '.strlen($curresult)." isn't equal to expected size ".$command['modifiers']['SIZE'] * $command['count'].'.');
-                } 
+                }
             } catch (StructException $e) {
                 throw new StructException('An error occurred while packing '.$data[$command['datakey']].' at offset '.$command['datakey'].' ('.$e->getMessage().').');
             }
@@ -393,7 +392,7 @@ class StructTools
                             $result[$arraycount] = true;
                         }
                         break;
-                    
+
                     case 'q':
                     case 'Q':
                     case 'l':
@@ -406,7 +405,7 @@ class StructTools
                     case 'C':
                         $result[$arraycount] = $this->num_unpack($dataarray[$command['datakey']], $command['modifiers']['SIZE'], ctype_upper($command['phpformat']));
                         break;
-                    
+
                     default:
                         $result[$arraycount] = implode('', unpack($command['phpformat'].$command['count'], $dataarray[$command['datakey']])); // Unpack current char
                         break;
@@ -464,7 +463,9 @@ class StructTools
         $size = 0;
         $modifier = $this->MODIFIERS['@'];
         $count = null;
-        if($format == '') return 0;
+        if ($format == '') {
+            return 0;
+        }
         foreach (str_split($format) as $offset => $currentformatchar) {
             if (isset($this->MODIFIERS[$currentformatchar])) {
                 $modifier = $this->MODIFIERS[$currentformatchar]; // Set the modifiers for the current format char
@@ -480,6 +481,7 @@ class StructTools
                 throw new StructException('Unkown format or modifier supplied ('.$currentformatchar.' at offset '.$offset.').');
             }
         }
+
         return $size;
     }
 
@@ -557,7 +559,8 @@ class StructTools
 
         return $result;
     }
-   /**
+
+    /**
      * binadd.
      *
      *  Convert a binary string to an array based on the given format string
@@ -606,9 +609,11 @@ class StructTools
                 throw new StructException('Unkown format or modifier supplied ('.$currentformatchar.' at offset '.$offset.').');
             }
         }
+
         return $dataarray;
     }
-   /**
+
+    /**
      * pdaformt.
      *
      *  Pad format string with x format where needed
@@ -617,7 +622,8 @@ class StructTools
      *
      * @return Padded format string
      **/
-    public function padformat($format) {
+    public function padformat($format)
+    {
         $modifier = $this->MODIFIERS['@'];
         $result = null; // Result gormat string
         $count = null;
@@ -638,8 +644,8 @@ class StructTools
                     $totallength += $modifier['SIZE'][$currentformatchar] * $count;
                 } else {
                     for ($x = 0; $x < $count; $x++) {
-                        if($modifier['MODIFIER'] == '@'){
-                            $result .= str_pad("", $this->posmod(-$totallength, $modifier['SIZE'][$currentformatchar]), "x");
+                        if ($modifier['MODIFIER'] == '@') {
+                            $result .= str_pad('', $this->posmod(-$totallength, $modifier['SIZE'][$currentformatchar]), 'x');
 
                             $totallength += $this->posmod(-$totallength, $modifier['SIZE'][$currentformatchar]) + $modifier['SIZE'][$currentformatchar];
                         }
@@ -666,42 +672,56 @@ class StructTools
      *
      * @return binary version of the given number
      **/
-    public function decbin($number, $length) {
+    public function decbin($number, $length)
+    {
         $concat = '';
-        if($number < 0){
+        if ($number < 0) {
             $negative = true;
             $number = -$number;
-        } else $negative = false;
+        } else {
+            $negative = false;
+        }
         while ($number > 0) {
-            $concat = ((string)$number % 2) . $concat;
+            $concat = ((string) $number % 2).$concat;
             $number = floor($number / 2);
         }
-        $concat = str_pad($concat, $length, "0", STR_PAD_LEFT);
-        if($negative) $concat = $this->binadd($this->stringnot($concat), '1');
-        if(strlen($concat) > $length) trigger_error("Converted binary number is too long (".strlen($concat)." > ".$length.").");
+        $concat = str_pad($concat, $length, '0', STR_PAD_LEFT);
+        if ($negative) {
+            $concat = $this->binadd($this->stringnot($concat), '1');
+        }
+        if (strlen($concat) > $length) {
+            trigger_error('Converted binary number is too long ('.strlen($concat).' > '.$length.').');
+        }
+
         return $concat;
     }
+
     /**
      * bindec.
      *
-     *  Converts a binary number to a decimal. 
+     *  Converts a binary number to a decimal.
      *
      * @param	$binary		binary number to turn into decimal
      * @param	$unsigned	if set to false will interpret binary string as signed
      *
      * @return deciaml version of the given number
      **/
-    public function bindec($binary, $unsigned = true) {
+    public function bindec($binary, $unsigned = true)
+    {
         $decimal = 0;
-        if(!$unsigned && $binary[0] == "1") {
+        if (!$unsigned && $binary[0] == '1') {
             $binary = $this->binadd($this->stringnot($binary), '1');
             $negative = -1;
-        } else $negative = 1;
+        } else {
+            $negative = 1;
+        }
         foreach (str_split(strrev($binary)) as $n => $bit) {
             $decimal += (pow(2, $n) * $bit);
         }
+
         return $decimal * $negative;
     }
+
     /**
      * stringnot.
      *
@@ -711,19 +731,22 @@ class StructTools
      *
      * @return xored string
      **/
-    public function stringnot($string) {
+    public function stringnot($string)
+    {
         foreach (str_split($string) as $key => $char) {
-            if($char == "0") {
-                $string[$key] = "1";
-            } else if($char == "1") {
-                $string[$key] = "0";
+            if ($char == '0') {
+                $string[$key] = '1';
+            } elseif ($char == '1') {
+                $string[$key] = '0';
             } else {
-                trigger_error("Found unrecognized char ".$char." at string offset " . $key);
+                trigger_error('Found unrecognized char '.$char.' at string offset '.$key);
             }
         }
+
         return $string;
     }
-   /**
+
+    /**
      * binadd.
      *
      *  Add two binary numbers
@@ -733,30 +756,35 @@ class StructTools
      *
      * @return sum of the two numbers
      **/
-    public function binadd($x,$y){
+    public function binadd($x, $y)
+    {
         $maxlen = max(strlen($x), strlen($y));
 
-        #Normalize lengths
-        $x = str_pad($x, $maxlen, "0", STR_PAD_LEFT);
-        $y = str_pad($y, $maxlen, "0", STR_PAD_LEFT);
+        //Normalize lengths
+        $x = str_pad($x, $maxlen, '0', STR_PAD_LEFT);
+        $y = str_pad($y, $maxlen, '0', STR_PAD_LEFT);
 
         $result = '';
         $carry = 0;
-        foreach(array_reverse($this->range(0, $maxlen)) as $i) {
+        foreach (array_reverse($this->range(0, $maxlen)) as $i) {
             $r = $carry;
             $r += ($x[$i] == '1') ? 1 : 0;
             $r += ($y[$i] == '1') ? 1 : 0;
 
-            # r can be 0,1,2,3 (carry + x[i] + y[i])
-            # and among these, for r==1 and r==3 you will have result bit = 1
-            # for r==2 and r==3 you will have carry = 1
-            
-            $result = (($r % 2 == 1) ? '1' : '0') . $result;
+            // r can be 0,1,2,3 (carry + x[i] + y[i])
+            // and among these, for r==1 and r==3 you will have result bit = 1
+            // for r==2 and r==3 you will have carry = 1
+
+            $result = (($r % 2 == 1) ? '1' : '0').$result;
             $carry = ($r < 2) ? 0 : 1;
         }
-        if ($carry != 0) $result = '1' . $result; 
-        return str_pad($result, $maxlen, "0", STR_PAD_LEFT);
+        if ($carry != 0) {
+            $result = '1'.$result;
+        }
+
+        return str_pad($result, $maxlen, '0', STR_PAD_LEFT);
     }
+
     /**
      * num_pack.
      *
@@ -786,7 +814,7 @@ class StructTools
         }
         $bits = $this->decbin($n, $bitnumber);
         $s = null;
-        foreach (explode("2", wordwrap($bits, 8, "2", true)) as $byte) {
+        foreach (explode('2', wordwrap($bits, 8, '2', true)) as $byte) {
             $s .= chr($this->bindec($byte));
         }
         $break = true;
@@ -833,13 +861,15 @@ class StructTools
         foreach (str_split($s) as $i) {
             $bits .= $this->decbin(ord($i), 8);
         }
+
         return $this->bindec($bits, $unsigned);
     }
+
     /**
-    * posmod(numeric,numeric) : numeric
-    * Works just like the % (modulus) operator, only returns always a postive number.
-    */
-    function posmod($a, $b)
+     * posmod(numeric,numeric) : numeric
+     * Works just like the % (modulus) operator, only returns always a postive number.
+     */
+    public function posmod($a, $b)
     {
         $resto = $a % $b;
         if ($resto < 0) {
@@ -848,6 +878,7 @@ class StructTools
 
         return $resto;
     }
+
     /**
      * array_each_strlen.
      *
@@ -884,6 +915,7 @@ class StructTools
 
         return $count;
     }
+
     /**
      * range.
      *
@@ -935,4 +967,3 @@ class StructTools
         return strlen($input);
     }
 }
-

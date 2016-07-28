@@ -1,6 +1,7 @@
 <?php
 
 namespace danog\PHP;
+
 /**
  * PHPStruct
  * PHP implementation of Python's struct module.
