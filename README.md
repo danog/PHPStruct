@@ -23,10 +23,9 @@ It has lots of advantages over PHP's native implementation of pack and unpack, s
 * The syntax of the format string of pack and unpack is the same as in python's struct module.
 * The result of unpack is normal numerically indexed array that starts from 0 like it should.
 * The result of unpack has type casted values (int for integer formats, bool for boolean formats, float for float formats and string for all of the other formats).
-* Pack is more strict about the type of input formats.
 * The calcsize function is implemented.
-* The q and Q formats can be used even on 32 bit systems.
-
+* The q and Q formats can be used even on 32 bit systems (the downside is limited precision).
+* Padding is supported for the @ modifier.
 
 For now custom byte size may not work properly on certain machines for the f and d formats.
 
