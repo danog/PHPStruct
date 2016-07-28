@@ -13,22 +13,26 @@ namespace danog\PHP;
  * @license		MIT license
  */
 // Struct class (for dynamic access)
-class StructClass {
+class StructClass
+{
     public $struct = null; // Will store an instance of the StructTools class
     public $format = null; // Will contain the format
     public $size = null; // Will contain the size
+
     /**
      * Constructor.
      *
      * Stores instance of the StructTools class and optional format/size
      */
-    public function __construct($format = null) {
+    public function __construct($format = null)
+    {
         $this->struct = new \danog\PHP\StructTools();
-        if($format !== null) {
+        if ($format !== null) {
             $this->format = $format;
             $this->size = $this->struct->calcsize($format);
         }
     }
+
     /**
      * pack.
      *
@@ -40,9 +44,12 @@ class StructClass {
      */
     public function pack(...$data)
     {
-        if($this->format === null) {
+        if ($this->format === null) {
             $format = array_shift($data);
-        } else $format = $this->format;
+        } else {
+            $format = $this->format;
+        }
+
         return $this->struct->pack($format, ...$data);
     }
 
@@ -58,12 +65,13 @@ class StructClass {
      */
     public function unpack($format_maybe_data, $data = null)
     {
-        if($this->format === null) {
+        if ($this->format === null) {
             $format = $format_maybe_data;
         } else {
             $format = $this->format;
             $data = $format_maybe_data;
         }
+
         return $this->struct->unpack($format, $data);
     }
 
