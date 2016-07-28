@@ -8,4 +8,4 @@ php:
 before_script:
   - composer update --dev
 script:
-  - phpunit --bootstrap lib/danog/PHP/Struct.php tests/danog/PHP/StructTest.php --verbose
+  - vendor/phpunit/phpunit/phpunit --bootstrap lib/danog/PHP/Struct.php --bootstrap lib/danog/PHP/StructException.php tests/danog/PHP/StructClass.php --bootstrap lib/danog/PHP/StructTools.php tests/danog/PHP/StructTest.php --verbose
