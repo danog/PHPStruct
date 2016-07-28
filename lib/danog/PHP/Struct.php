@@ -28,6 +28,7 @@ class Struct
     public static function pack($format, ...$data)
     {
         $struct = new \danog\PHP\StructClass($format);
+
         return $struct->pack(...$data);
     }
 
@@ -44,6 +45,7 @@ class Struct
     public static function unpack($format, $data)
     {
         $struct = new \danog\PHP\StructClass($format);
+
         return $struct->unpack($data);
     }
 
@@ -60,6 +62,7 @@ class Struct
     public static function calcsize($format)
     {
         $struct = new \danog\PHP\StructClass($format);
+
         return $struct->size;
     }
 }
