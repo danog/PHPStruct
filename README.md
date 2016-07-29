@@ -13,6 +13,7 @@ Licensed under MIT.
 PHP implementation of Python's struct module.
 
 This library was created to help me develop a [client for the mtproto protocol](https://github.com/danog/MadelineProto).  
+It supports php 5.6, php 7 and HHVM.  
 
 The functions and the formats are exactly the ones used in python's struct 
 (https://docs.python.org/3/library/struct.html)
