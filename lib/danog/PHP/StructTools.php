@@ -30,8 +30,8 @@ class StructTools
             'B' => 'C', // should be 1 (8 bit)
             'h' => 's', // should be 2 (16 bit)
             'H' => 'S', // should be 2 (16 bit)
-            'i' => 'i', // should be 4 (32 bit)
-            'I' => 'I', // should be 4 (32 bit)
+            'i' => 'l', // should be 4 (32 bit)
+            'I' => 'L', // should be 4 (32 bit)
             'l' => 'l', // should be 4 (32 bit)
             'L' => 'L', // should be 4 (32 bit)
             'q' => 'q', // should be 8 (64 bit)
@@ -304,7 +304,8 @@ class StructTools
                     case 'S':
                     case 'c':
                     case 'C':
-                        $curresult = $this->num_pack($data[$command['datakey']], $command['modifiers']['SIZE'], ctype_upper($command['phpformat']));
+	                    $curresult = $this->num_pack($data[$command['datakey']], $command['modifiers']['SIZE'], ctype_upper($command['phpformat']));
+
                         break;
 
                     case '?':
@@ -318,7 +319,7 @@ class StructTools
                     trigger_error('Size of packed data '.strlen($curresult)." isn't equal to expected size ".$command['modifiers']['SIZE'] * $command['count'].'.');
                 }
             } catch (StructException $e) {
-                throw new StructException('An error occurred while packing '.$data[$command['datakey']].' at offset '.$command['datakey'].' ('.$e->getMessage().').');
+                throw new StructException('An error occurred while packing '.$data[$command['datakey']].' at format key '.$command['format'].' ('.$e->getMessage().').');
             }
             if ($command['modifiers']['FORMAT_ENDIANNESS'] != $command['modifiers']['BIG_ENDIAN']) {
                 $curresult = strrev($curresult);
@@ -681,13 +682,16 @@ class StructTools
         } else {
             $negative = false;
         }
-        while ($number > 0) {
-            $concat = ((string) $number % 2).$concat;
-            $number = floor($number / 2);
-        }
+        do {
+            $concat = ($number % 2).$concat;
+            $number = intval($number / 2);
+        } while($number > 0);
         $concat = str_pad($concat, $length, '0', STR_PAD_LEFT);
         if ($negative) {
             $concat = $this->binadd($this->stringnot($concat), '1');
+        }
+        if(strlen($concat) == $length + 1 && $concat == str_pad("1", $length + 1, '0', STR_PAD_RIGHT)){
+            $concat = str_pad("", $length, "0");
         }
         if (strlen($concat) > $length) {
             trigger_error('Converted binary number is too long ('.strlen($concat).' > '.$length.').');
@@ -709,7 +713,7 @@ class StructTools
     public function bindec($binary, $unsigned = true)
     {
         $decimal = 0;
-        if (!$unsigned && $binary[0] == '1') {
+        if (!$unsigned && $binary[0] == "1") {
             $binary = $this->binadd($this->stringnot($binary), '1');
             $negative = -1;
         } else {
@@ -801,13 +805,66 @@ class StructTools
      **/
     public function num_pack($n, $blocksize, $unsigned)
     {
+        if(PHP_INT_SIZE < $blocksize) {
+            if($unsigned){}
+            switch ($blocksize) {
+                case '1':
+                    $formatchar = "c";
+                    break;
+                case '2':
+                    $formatchar = "n";
+                    break;
+                case '4':
+                    $formatchar = "N";
+                    break;
+                case '8':
+                    $formatchar = "J";
+                    break;
+            }
+        }
         $bitnumber = $blocksize * 8;
         if ($unsigned) {
-            $max = pow(2, $bitnumber) - 1;
             $min = 0;
+            switch($bitnumber) {
+                case '8':
+                    $max = 255;
+                    break;
+                case '16':
+                    $max = 65535;
+                    break;
+                case '32':
+                    $max = 4294967295;
+                    break;
+                case '64':
+                    $max = 18446744073709551615;
+                    break; 
+                default:
+                    $max = pow(2, $bitnumber) - 1;
+                    break;
+            }
         } else {
-            $max = pow(2, $bitnumber - 1) - 1;
-            $min = -pow(2, $bitnumber - 1);
+            switch($bitnumber) {
+                case '8':
+                    $min = -127;
+                    $max = 127;
+                    break;
+                case '16':
+                    $min = -32767;
+                    $max = 32767;
+                    break;
+                case '32':
+                    $min = -2147483647;
+                    $max = 2147483647;
+                    break;
+                case '64':
+                    $min = -9223372036854775807;
+                    $max = 9223372036854775807;
+                    break; 
+                default:
+                    $max = pow(2, $bitnumber - 1) - 1;
+                    $min = -pow(2, $bitnumber - 1);
+                    break;
+            }
         }
         if ($n < $min || $n > $max) {
             trigger_error('Number is not within required range ('.$min.' <= number <= '.$max.').');
