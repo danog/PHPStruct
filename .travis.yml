@@ -1,8 +1,10 @@
+sudo: required
+dist: trusty
 language: php
 php:
   - '7.0'
   - nightly
-  - hhvm-3.14.3
+  - hhvm
   - '5.6'
 addons:
   apt:
