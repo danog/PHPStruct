@@ -2,9 +2,10 @@
 
 [![Build Status](https://travis-ci.org/danog/PHPStruct.svg?branch=master)](https://travis-ci.org/danog/PHPStruct)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/7b91e30ec89a4313bdb34766ea990113)](https://www.codacy.com/app/daniil-gentili-dg/PHPStruct?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=danog/PHPStruct&amp;utm_campaign=Badge_Grade)
-[![Packagist](https://img.shields.io/packagist/l/danog/phpstruct.svg?maxAge=2592000)](https://packagist.org/packages/danog/phpstruct)
-[![Packagist](https://img.shields.io/packagist/dm/danog/phpstruct.svg?maxAge=2592000)](https://packagist.org/packages/danog/phpstruct)
-[![HHVM](https://img.shields.io/hhvm/danog/phpstruct.svg?maxAge=2592000)]()
+[![License](https://img.shields.io/packagist/l/danog/phpstruct.svg?maxAge=2592000?style=flat-square)](https://opensource.org/licenses/MIT)
+[![Packagist download count](https://img.shields.io/packagist/dm/danog/phpstruct.svg?maxAge=2592000?style=flat-square)](https://packagist.org/packages/danog/phpstruct)
+[![Packagist](https://img.shields.io/packagist/v/danog/PHPStruct.svg?maxAge=2592000?style=flat-square)](https://packagist.org/packages/danog/phpstruct)
+[![HHVM Status](http://hhvm.h4cc.de/badge/danog/phpstruct.svg?style=flat-square)](http://hhvm.h4cc.de/package/danog/phpstruct)
 [![StyleCI](https://styleci.io/repos/62454134/shield)](https://styleci.io/repos/62454134)
 
 Licensed under MIT.
