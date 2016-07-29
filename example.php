@@ -19,7 +19,7 @@ $struct = new \danog\PHP\StructClass();
 var_dump($struct->unpack('2cxbxBx?xhxHxixIxlxLxqxQxnxNxfxdx2sx5pP', $struct->pack('2cxbxBx?xhxHxixIxlxLxqxQxnxNxfxdx2sx5pP', 'n', 'v', -127, 255, true, -32767, 65535, -2147483647, 4294967295, 999999, 9999999,  -9223372036854775807, 18446744073709550590, 34434, 344434, 2.2343, 3.03424, 'df', 'asdfghjkl', 1283912)));
 
 // Static usage
-var_dump(\danog\PHP\Struct::unpack('2cxbxBx?xhxHxixIxlxLxqxQxnxNxfxdx2sx5pP', \danog\PHP\Struct::pack('2cxbxBx?xhxHxixIxlxLxqxQxnxNxfxdx2sx5pP', 'n', 'v', -127, 255, true, -32767, 65535, -2147483647, 4294967295, 999999, 9999999,  -9223372036854775807, 18446744073709550590, 34434, 344434, 2.2343, 3.03424, 'df', 'asdfghjkl', 1283912)));
+var_dump(\danog\PHP\Struct::unpack('2cxbxBx?xhxHxixIxlxLxqxQxnxNxfxdx2sx5pP', \danog\PHP\Struct::pack('2cxbxBx?xhxHxixIxlxLxqxQxnxNxfxdx2sx5pP', 'n', 'v', -127, 255, true, -32767, 65535, -2147483647, 4294967295, 999999, 9999999,  -922337203685, 18446744073709550590, 34434, 344434, 2.2343, 3.03424, 'df', 'asdfghjkl', 1283912)));
 
 // S'more examples
 var_dump(\danog\PHP\Struct::calcsize('f'));

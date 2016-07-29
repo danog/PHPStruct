@@ -419,6 +419,9 @@ class StructTools
                     if (!is_int($result[$arraycount]) && !is_float($result[$arraycount])) {
                         $result[$arraycount] = (int) $result[$arraycount];
                     }
+                    if(is_float($result[$arraycount]) && $result[$arraycount] < PHP_INT_MAX) {
+                        $result[$arraycount] = (int)$result[$arraycount];
+                    }
                     break;
                 case 'float':
                     if (!is_float($result[$arraycount])) {
@@ -715,15 +718,16 @@ class StructTools
         $decimal = 0;
         if (!$unsigned && $binary[0] == "1") {
             $binary = $this->binadd($this->stringnot($binary), '1');
-            $negative = -1;
+            $negative = true;
         } else {
-            $negative = 1;
+            $negative = false;
         }
+        
         foreach (str_split(strrev($binary)) as $n => $bit) {
             $decimal += (pow(2, $n) * $bit);
         }
 
-        return $decimal * $negative;
+        return $negative ? -$decimal : $decimal;
     }
 
     /**
@@ -805,23 +809,6 @@ class StructTools
      **/
     public function num_pack($n, $blocksize, $unsigned)
     {
-        if(PHP_INT_SIZE < $blocksize) {
-            if($unsigned){}
-            switch ($blocksize) {
-                case '1':
-                    $formatchar = "c";
-                    break;
-                case '2':
-                    $formatchar = "n";
-                    break;
-                case '4':
-                    $formatchar = "N";
-                    break;
-                case '8':
-                    $formatchar = "J";
-                    break;
-            }
-        }
         $bitnumber = $blocksize * 8;
         if ($unsigned) {
             $min = 0;

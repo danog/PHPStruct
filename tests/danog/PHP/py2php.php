@@ -5,4 +5,4 @@ require 'lib/danog/PHP/StructClass.php';
 require 'lib/danog/PHP/StructException.php';
 require 'lib/danog/PHP/Struct.php';
 
-var_dump(\danog\PHP\Struct::unpack('2cxbxBx?xhxHxixIxlxLxqxQxnxNxfxdx2xsx5pP', shell_exec('tests/danog/PHP/py2php.py')));
+var_dump(\danog\PHP\Struct::unpack('2cxbxBx?xhxHxixIxlxLxqxQxfxdx2xsx5pP', shell_exec('tests/danog/PHP/py2php.py')));
