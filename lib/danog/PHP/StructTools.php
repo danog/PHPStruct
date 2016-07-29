@@ -304,7 +304,7 @@ class StructTools
                     case 'S':
                     case 'c':
                     case 'C':
-	                    $curresult = $this->num_pack($data[$command['datakey']], $command['modifiers']['SIZE'], ctype_upper($command['phpformat']));
+                        $curresult = $this->num_pack($data[$command['datakey']], $command['modifiers']['SIZE'], ctype_upper($command['phpformat']));
 
                         break;
 
@@ -419,8 +419,8 @@ class StructTools
                     if (!is_int($result[$arraycount]) && !is_float($result[$arraycount])) {
                         $result[$arraycount] = (int) $result[$arraycount];
                     }
-                    if(is_float($result[$arraycount]) && $result[$arraycount] < PHP_INT_MAX) {
-                        $result[$arraycount] = (int)$result[$arraycount];
+                    if (is_float($result[$arraycount]) && $result[$arraycount] < PHP_INT_MAX) {
+                        $result[$arraycount] = (int) $result[$arraycount];
                     }
                     break;
                 case 'float':
@@ -688,13 +688,13 @@ class StructTools
         do {
             $concat = ($number % 2).$concat;
             $number = intval($number / 2);
-        } while($number > 0);
+        } while ($number > 0);
         $concat = str_pad($concat, $length, '0', STR_PAD_LEFT);
         if ($negative) {
             $concat = $this->binadd($this->stringnot($concat), '1');
         }
-        if(strlen($concat) == $length + 1 && $concat == str_pad("1", $length + 1, '0', STR_PAD_RIGHT)){
-            $concat = str_pad("", $length, "0");
+        if (strlen($concat) == $length + 1 && $concat == str_pad('1', $length + 1, '0', STR_PAD_RIGHT)) {
+            $concat = str_pad('', $length, '0');
         }
         if (strlen($concat) > $length) {
             trigger_error('Converted binary number is too long ('.strlen($concat).' > '.$length.').');
@@ -716,13 +716,13 @@ class StructTools
     public function bindec($binary, $unsigned = true)
     {
         $decimal = 0;
-        if (!$unsigned && $binary[0] == "1") {
+        if (!$unsigned && $binary[0] == '1') {
             $binary = $this->binadd($this->stringnot($binary), '1');
             $negative = true;
         } else {
             $negative = false;
         }
-        
+
         foreach (str_split(strrev($binary)) as $n => $bit) {
             $decimal += (pow(2, $n) * $bit);
         }
@@ -812,7 +812,7 @@ class StructTools
         $bitnumber = $blocksize * 8;
         if ($unsigned) {
             $min = 0;
-            switch($bitnumber) {
+            switch ($bitnumber) {
                 case '8':
                     $max = 255;
                     break;
@@ -824,13 +824,13 @@ class StructTools
                     break;
                 case '64':
                     $max = 18446744073709551615;
-                    break; 
+                    break;
                 default:
                     $max = pow(2, $bitnumber) - 1;
                     break;
             }
         } else {
-            switch($bitnumber) {
+            switch ($bitnumber) {
                 case '8':
                     $min = -127;
                     $max = 127;
@@ -846,7 +846,7 @@ class StructTools
                 case '64':
                     $min = -9223372036854775807;
                     $max = 9223372036854775807;
-                    break; 
+                    break;
                 default:
                     $max = pow(2, $bitnumber - 1) - 1;
                     $min = -pow(2, $bitnumber - 1);
