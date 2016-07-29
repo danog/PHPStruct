@@ -419,9 +419,9 @@ class StructTools
                     if (!is_int($result[$arraycount]) && !is_float($result[$arraycount])) {
                         $result[$arraycount] = (int) $result[$arraycount];
                     }
-                    if (is_float($result[$arraycount]) && $result[$arraycount] < PHP_INT_MAX) {
+/*                    if (is_float($result[$arraycount]) && $result[$arraycount] < PHP_INT_MAX) {
                         $result[$arraycount] = (int) $result[$arraycount];
-                    }
+                    }*/
                     break;
                 case 'float':
                     if (!is_float($result[$arraycount])) {
@@ -686,7 +686,7 @@ class StructTools
             $negative = false;
         }
         do {
-            $concat = ($number % 2).$concat;
+            $concat = $this->posmod($number, 2).$concat;
             $number = intval($number / 2);
         } while ($number > 0);
         $concat = str_pad($concat, $length, '0', STR_PAD_LEFT);
@@ -697,7 +697,7 @@ class StructTools
             $concat = str_pad('', $length, '0');
         }
         if (strlen($concat) > $length) {
-            trigger_error('Converted binary number is too long ('.strlen($concat).' > '.$length.').');
+            trigger_error('Converted binary number '.$concat.' is too long ('.strlen($concat).' > '.$length.').');
         }
 
         return $concat;
