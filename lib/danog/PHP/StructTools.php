@@ -685,10 +685,11 @@ class StructTools
         } else {
             $negative = false;
         }
-        do {
-            $concat = $this->posmod($number, 2).$concat;
-            $number = intval($number / 2);
-        } while ($number > 0);
+        while ($number > 0) {
+            $curchar = $this->posmod($number, 2); 
+            $concat = $curchar.$concat;
+            $number = (($number - $curchar) / 2);
+        }
         $concat = str_pad($concat, $length, '0', STR_PAD_LEFT);
         if ($negative) {
             $concat = $this->binadd($this->stringnot($concat), '1');
