@@ -686,7 +686,7 @@ class StructTools
             $negative = false;
         }
         while ($number > 0) {
-            $curchar = $this->posmod($number, 2); 
+            $curchar = $this->posmod($number, 2);
             $concat = $curchar.$concat;
             $number = (($number - $curchar) / 2);
         }
