@@ -5,7 +5,7 @@ require 'lib/danog/PHP/StructTools.php';
 require 'lib/danog/PHP/StructClass.php';
 require 'lib/danog/PHP/StructException.php';
 require 'lib/danog/PHP/Struct.php';
-var_dump(bin2hex(pack('J', 18446744073709550590)));
+var_dump(bin2hex(pack('J', "18446744073709550591")));
 var_dump(bin2hex(\danog\PHP\Struct::pack('Q', 18446744073709550590)));
 
 var_dump(\danog\PHP\Struct::calcsize('>l'));

@@ -724,7 +724,9 @@ class StructTools
         }
 
         foreach (str_split(strrev($binary)) as $n => $bit) {
-            $decimal += (pow(2, $n) * $bit);
+            if ($bit == 1) {
+                $decimal += (pow(2, $n) * $bit);
+            }
         }
 
         return $negative ? -$decimal : $decimal;
