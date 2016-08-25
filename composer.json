@@ -4,7 +4,7 @@
     "description": "PHP implementation of python's struct module.",
     "license": "MIT",
     "homepage": "https://daniil.it/phpstruct",
-    "keywords": ["pack", "unpack", "byte", "bytes", "python", "struct"],
+    "keywords": ["pack", "unpack", "byte", "bytes", "python", "struct", "integer", "float", "string", "decimal", "binary"],
     "authors": [
         {
             "name": "danog",
