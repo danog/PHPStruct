@@ -15,7 +15,7 @@ namespace danog\PHP;
 // Struct class (for dynamic access)
 class StructClass
 {
-    private $struct = null; // Will store an instance of the StructTools class
+    public $struct = null; // Will store an instance of the StructTools class
     public $format = null; // Will contain the format
     public $size = null; // Will contain the size
 
