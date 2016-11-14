@@ -15,6 +15,20 @@ namespace danog\PHP;
 // Struct class (for static access)
 class Struct
 {
+    private static $struct = null;
+    /**
+     * constructor.
+     *
+     * Istantiates the PHPStruct class in a static variable
+     *
+     * @param	$format	    Format string
+     *
+     */
+    public static function constructor($format) {
+        if (self::$struct == null) {
+            self::$struct = new \danog\PHP\StructClass($format);
+        }
+    }
     /**
      * pack.
      *
@@ -27,9 +41,8 @@ class Struct
      */
     public static function pack($format, ...$data)
     {
-        $struct = new \danog\PHP\StructClass($format);
-
-        return $struct->pack(...$data);
+        self::constructor($format);
+        return self::$struct->pack(...$data);
     }
 
     /**
@@ -44,9 +57,8 @@ class Struct
      */
     public static function unpack($format, $data)
     {
-        $struct = new \danog\PHP\StructClass($format);
-
-        return $struct->unpack($data);
+        self::constructor($format);
+        return self::$struct->unpack($data);
     }
 
     /**
@@ -61,8 +73,8 @@ class Struct
      */
     public static function calcsize($format)
     {
-        $struct = new \danog\PHP\StructClass($format);
+        self::constructor($format);
 
-        return $struct->size;
+        return self::$struct->size;
     }
 }
