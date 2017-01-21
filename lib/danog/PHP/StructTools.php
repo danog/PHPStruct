@@ -324,22 +324,6 @@ class StructTools
             if ($command['modifiers']['FORMAT_ENDIANNESS'] != $command['modifiers']['BIG_ENDIAN']) {
                 $curresult = strrev($curresult);
             } // Reverse if wrong endianness
-            /*
-            if (strlen($curresult) > $command['modifiers']['SIZE'] * $command['count']) {
-                if ($command['modifiers']['BIG_ENDIAN']) {
-                    $curresult = strrev($curresult);
-                }
-                $remains = array_slice(str_split($curresult), $command['modifiers']['SIZE'], strlen($curresult) - $command['modifiers']['SIZE']);
-                foreach ($remains as $rem) {
-                    if ($rem != '') {
-                        throw new StructException('Error while trimming result at offset '.$key.' (format char '.$command['format']."): data to trim isn't empty.");
-                    }
-                }
-                $curresult = implode('', substr($curresult, 0, $command['modifiers']['SIZE']));
-                if ($command['modifiers']['BIG_ENDIAN']) {
-                    $curresult = strrev($curresult);
-                }
-            }*/
             $result .= $curresult;
         }
         restore_error_handler();
@@ -565,7 +549,7 @@ class StructTools
     }
 
     /**
-     * binadd.
+     * data2array
      *
      *  Convert a binary string to an array based on the given format string
      *
@@ -678,24 +662,11 @@ class StructTools
      **/
     public function decbin($number, $length)
     {
-        $concat = '';
+        $concat = decbin($number);
         if ($number < 0) {
-            $negative = true;
-            $number = -$number;
+            $concat = str_pad(ltrim($concat, '1'), $length, '1', STR_PAD_LEFT);
         } else {
-            $negative = false;
-        }
-        while ($number > 0) {
-            $curchar = $this->posmod($number, 2);
-            $concat = $curchar.$concat;
-            $number = (($number - $curchar) / 2);
-        }
-        $concat = str_pad($concat, $length, '0', STR_PAD_LEFT);
-        if ($negative) {
-            $concat = $this->binadd($this->stringnot($concat), '1');
-        }
-        if (strlen($concat) == $length + 1 && $concat == str_pad('1', $length + 1, '0', STR_PAD_RIGHT)) {
-            $concat = str_pad('', $length, '0');
+            $concat = str_pad($concat, $length, '0', STR_PAD_LEFT);
         }
         if (strlen($concat) > $length) {
             trigger_error('Converted binary number '.$concat.' is too long ('.strlen($concat).' > '.$length.').');
@@ -716,84 +687,13 @@ class StructTools
      **/
     public function bindec($binary, $unsigned = true)
     {
-        $decimal = 0;
         if (!$unsigned && $binary[0] == '1') {
-            $binary = $this->binadd($this->stringnot($binary), '1');
-            $negative = true;
-        } else {
-            $negative = false;
-        }
-
-        foreach (str_split(strrev($binary)) as $n => $bit) {
-            if ($bit == 1) {
-                $decimal += (pow(2, $n) * $bit);
+            foreach (str_split($binary) as $key => $char) {
+                $binary[$key] =(int)!$char;
             }
+            return -(bindec($binary)+1);
         }
-
-        return $negative ? -$decimal : $decimal;
-    }
-
-    /**
-     * stringnot.
-     *
-     *  Performs a NOT operation on every bit in the string (by bit I mean a literal 1 or 0)
-     *
-     * @param	$string String to xor
-     *
-     * @return xored string
-     **/
-    public function stringnot($string)
-    {
-        foreach (str_split($string) as $key => $char) {
-            if ($char == '0') {
-                $string[$key] = '1';
-            } elseif ($char == '1') {
-                $string[$key] = '0';
-            } else {
-                trigger_error('Found unrecognized char '.$char.' at string offset '.$key);
-            }
-        }
-
-        return $string;
-    }
-
-    /**
-     * binadd.
-     *
-     *  Add two binary numbers
-     *
-     * @param	$x First binary number
-     * @param	$y Second binary number
-     *
-     * @return sum of the two numbers
-     **/
-    public function binadd($x, $y)
-    {
-        $maxlen = max(strlen($x), strlen($y));
-
-        //Normalize lengths
-        $x = str_pad($x, $maxlen, '0', STR_PAD_LEFT);
-        $y = str_pad($y, $maxlen, '0', STR_PAD_LEFT);
-
-        $result = '';
-        $carry = 0;
-        foreach (array_reverse($this->range(0, $maxlen)) as $i) {
-            $r = $carry;
-            $r += ($x[$i] == '1') ? 1 : 0;
-            $r += ($y[$i] == '1') ? 1 : 0;
-
-            // r can be 0,1,2,3 (carry + x[i] + y[i])
-            // and among these, for r==1 and r==3 you will have result bit = 1
-            // for r==2 and r==3 you will have carry = 1
-
-            $result = (($r % 2 == 1) ? '1' : '0').$result;
-            $carry = ($r < 2) ? 0 : 1;
-        }
-        if ($carry != 0) {
-            $result = '1'.$result;
-        }
-
-        return str_pad($result, $maxlen, '0', STR_PAD_LEFT);
+        return bindec($binary);
     }
 
     /**
