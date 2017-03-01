@@ -549,7 +549,7 @@ class StructTools
     }
 
     /**
-     * data2array
+     * data2array.
      *
      *  Convert a binary string to an array based on the given format string
      *
@@ -689,10 +689,12 @@ class StructTools
     {
         if (!$unsigned && $binary[0] == '1') {
             foreach (str_split($binary) as $key => $char) {
-                $binary[$key] =(int)!$char;
+                $binary[$key] = (int) !$char;
             }
-            return -(bindec($binary)+1);
+
+            return -(bindec($binary) + 1);
         }
+
         return bindec($binary);
     }
 
