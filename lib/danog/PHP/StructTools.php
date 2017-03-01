@@ -835,19 +835,19 @@ class StructTools
         } else {
             switch ($bitnumber) {
                 case '8':
-                    $min = -127;
+                    $min = -128;
                     $max = 127;
                     break;
                 case '16':
-                    $min = -32767;
+                    $min = -32768;
                     $max = 32767;
                     break;
                 case '32':
-                    $min = -2147483647;
+                    $min = -2147483648;
                     $max = 2147483647;
                     break;
                 case '64':
-                    $min = -9223372036854775807;
+                    $min = -9223372036854775808;
                     $max = 9223372036854775807;
                     break;
                 default:
