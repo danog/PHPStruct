@@ -793,7 +793,7 @@ class StructTools
     /**
      * num_pack.
      *
-     * Convert a number to a byte string.
+     * Convert a number to a big endian byte string.
      * If optional blocksize is given and greater than zero, pad the front of the
      * byte string with binary zeros so that the length is the
      * blocksize.
@@ -855,26 +855,11 @@ class StructTools
         }
         $bits = $this->decbin($n, $bitnumber);
         $s = null;
-        foreach (explode('2', wordwrap($bits, 8, '2', true)) as $byte) {
+        foreach (str_split($bits, 8) as $byte) {
             $s .= chr($this->bindec($byte));
         }
-        $break = true;
 
-        $l = strlen($s);
-        for ($i = 0; $i < $l; $i++) {
-            if ($s[$i] != pack('@')[0]) {
-                $break = false;
-                break;
-            }
-        }
-        if ($break) {
-            $s = pack('@1');
-            $i = 0;
-        }
-        $s = substr($s, $i);
-        if (strlen($s) < $blocksize) {
-            $s = pack('@'.($blocksize - strlen($s))).$s;
-        } elseif (strlen($s) > $blocksize) {
+        if (strlen($s) > $blocksize) {
             trigger_error('Generated data length ('.strlen($s).') is bigger than required length ('.$blocksize.').');
         }
 
