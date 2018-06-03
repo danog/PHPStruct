@@ -712,7 +712,7 @@ class StructTools
      * @param	$binary		binary number to turn into decimal
      * @param	$unsigned	if set to false will interpret binary string as signed
      *
-     * @return deciaml version of the given number
+     * @return decimal version of the given number
      **/
     public function bindec($binary, $unsigned = true)
     {
