@@ -726,7 +726,7 @@ class StructTools
 
         foreach (str_split(strrev($binary)) as $n => $bit) {
             if ($bit == 1) {
-                $decimal += (pow(2, $n) * $bit);
+                $decimal += pow(2, $n);
             }
         }
 
@@ -777,17 +777,11 @@ class StructTools
 
         $result = '';
         $carry = 0;
-        foreach (array_reverse($this->range(0, $maxlen)) as $i) {
-            $r = $carry;
-            $r += ($x[$i] == '1') ? 1 : 0;
-            $r += ($y[$i] == '1') ? 1 : 0;
+        for ($i = $maxlen-1; $i >= 0; $i--) {
+            $r = (int) ($carry + $x[$i] + $y[$i]);
 
-            // r can be 0,1,2,3 (carry + x[i] + y[i])
-            // and among these, for r==1 and r==3 you will have result bit = 1
-            // for r==2 and r==3 you will have carry = 1
-
-            $result = (($r % 2 == 1) ? '1' : '0').$result;
-            $carry = ($r < 2) ? 0 : 1;
+            $result = ($r & 1).$result;
+            $carry = $r >> 1;
         }
         if ($carry != 0) {
             $result = '1'.$result;
@@ -865,7 +859,9 @@ class StructTools
             $s .= chr($this->bindec($byte));
         }
         $break = true;
-        foreach ($this->range(strlen($s)) as $i) {
+
+        $l = strlen($s);
+        for ($i = 0; $i < $l; $i++) {
             if ($s[$i] != pack('@')[0]) {
                 $break = false;
                 break;
@@ -961,39 +957,6 @@ class StructTools
         }
 
         return $count;
-    }
-
-    /**
-     * range.
-     *
-     * Generate range
-     *
-     * @param	$start		Beginning of the range (or stop if no other params are specified)
-     * @param	$stop		End of the range
-     * @param	$step		Step to use in range
-     *
-     * @return array with the range
-     **/
-    public function range($start, $stop = null, $step = 1)
-    {
-        if ($stop === null) {
-            $stop = $start;
-            $start = 0;
-        }
-        if ($stop <= $start && $step < 0) {
-            $arr = range($stop, $start, -$step);
-            array_pop($arr);
-
-            return array_reverse($arr, false);
-        }
-        if ($step > 1 && $step > ($stop - $start)) {
-            $arr = [$start];
-        } else {
-            $arr = range($start, $stop, $step);
-            array_pop($arr);
-        }
-
-        return $arr;
     }
 
     /**
