@@ -854,7 +854,7 @@ class StructTools
             trigger_error('Number is not within required range ('.$min.' <= number <= '.$max.').');
         }
         $bits = $this->decbin($n, $bitnumber);
-        $s = null;
+        $s = '';
         foreach (str_split($bits, 8) as $byte) {
             $s .= chr($this->bindec($byte));
         }
