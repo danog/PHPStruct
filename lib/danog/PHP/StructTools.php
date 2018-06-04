@@ -240,6 +240,7 @@ class StructTools
         if (error_reporting() === 0) {
             return true; // return true to continue through the others error handlers
         }
+
         throw new StructException($errstr.' on line '.$errline, $errno);
     }
 
@@ -777,7 +778,7 @@ class StructTools
 
         $result = '';
         $carry = 0;
-        for ($i = $maxlen-1; $i >= 0; $i--) {
+        for ($i = $maxlen - 1; $i >= 0; $i--) {
             $r = (int) ($carry + $x[$i] + $y[$i]);
 
             $result = ($r & 1).$result;
