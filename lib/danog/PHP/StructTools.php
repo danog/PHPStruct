@@ -141,7 +141,7 @@ class StructTools
             'q' => 'int',
             'Q' => 'int',
 
-             // Floating point formats
+            // Floating point formats
             'f' => 'float',
             'd' => 'float',
 
@@ -381,6 +381,7 @@ class StructTools
             if ($command['modifiers']['FORMAT_ENDIANNESS'] != $command['modifiers']['BIG_ENDIAN']) {
                 $dataarray[$command['datakey']] = strrev($dataarray[$command['datakey']]);
             } // Reverse if wrong endianness
+
             try {
                 switch ($command['phpformat']) {
                     case 'p':
@@ -801,7 +802,7 @@ class StructTools
      *
      * @param	$n		    Number to pack
      * @param	$blocksize	Block size
-     * @param   $unsigned Boolean that determines whether to work in signed or unsigned mode
+     * @param $unsigned Boolean that determines whether to work in signed or unsigned mode
      *
      * @return Byte string
      **/
@@ -875,7 +876,7 @@ class StructTools
      *
      * @param	$s		    Data to unpack
      * @param	$blocksize	Block size
-     * @param   $unsigned Boolean that determines whether to work in signed or unsigned mode
+     * @param $unsigned Boolean that determines whether to work in signed or unsigned mode
      *
      * @return float or int with the unpack value
      **/
